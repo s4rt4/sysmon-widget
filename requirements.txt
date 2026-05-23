@@ -1,0 +1,5 @@
+python-xlib
+psutil
+requests
+dbus-python
+Pillow
