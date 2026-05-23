@@ -39,6 +39,22 @@ The default mode is borderless and hidden from the taskbar. For a normal debug w
 python main.py --managed
 ```
 
+Choose a color theme:
+
+```bash
+python main.py --theme graphite
+```
+
+Available themes: `purple`, `graphite`, `midnight`, `forest`, `rose`, `amber`.
+
+You can also set the theme from local config:
+
+```python
+LOCAL_CONFIG = {
+    "theme": "midnight",
+}
+```
+
 The widget degrades gracefully when optional desktop services are unavailable:
 
 - Weather shows a placeholder until `CONFIG["weather"]["api_key"]` is set.

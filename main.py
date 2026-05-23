@@ -6,7 +6,7 @@ try:
 except ImportError:  # pragma: no cover - startup continues with panel fallbacks
     psutil = None
 
-from config import CONFIG
+from config import CONFIG, THEMES, apply_theme
 from utils.xlib_hints import apply_desktop_hints
 from widget import WidgetLayout
 
@@ -26,11 +26,18 @@ def parse_args():
         action="store_true",
         help="Use _NET_WM_WINDOW_TYPE_DESKTOP. On XFCE this may hide behind xfdesktop.",
     )
+    parser.add_argument(
+        "--theme",
+        choices=sorted(THEMES),
+        help="Color theme to use.",
+    )
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
+    if args.theme:
+        apply_theme(args.theme)
     if psutil is not None:
         psutil.cpu_percent(interval=None)
 

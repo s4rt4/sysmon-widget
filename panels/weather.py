@@ -30,7 +30,7 @@ class WeatherPanel:
         self.right = tk.Frame(self.widget, bg=self.widget.cget("bg"))
         self.right.pack(side="left", fill="both", expand=True)
 
-        self.icon_label = make_label(self.left, config, text="☁", size=30, anchor="center")
+        self.icon_label = make_label(self.left, config, text="☁", size=42, anchor="center")
         self.icon_label.pack(anchor="center")
 
         self.temp_label = make_label(self.left, config, text="--°C", size=19, weight="bold", anchor="center")
@@ -103,7 +103,7 @@ class WeatherPanel:
             try:
                 response = requests.get(f"https://openweathermap.org/img/wn/{icon}@2x.png", timeout=8)
                 response.raise_for_status()
-                image = Image.open(BytesIO(response.content)).resize((44, 44))
+                image = Image.open(BytesIO(response.content)).resize((58, 58))
                 self.icon_photo = ImageTk.PhotoImage(image)
                 self.icon_label.configure(image=self.icon_photo, text="")
             except Exception:

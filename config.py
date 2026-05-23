@@ -3,7 +3,72 @@ import os
 from pathlib import Path
 
 
+THEMES = {
+    "purple": {
+        "bg_color": "#2A1A3E",
+        "panel_bg": "#2A1A3E",
+        "separator_color": "#3A2A50",
+        "primary": "#CC44FF",
+        "secondary": "#FF44AA",
+        "track_bg": "#1A0F29",
+        "text_main": "#FFFFFF",
+        "text_muted": "#A99BB8",
+    },
+    "graphite": {
+        "bg_color": "#202124",
+        "panel_bg": "#202124",
+        "separator_color": "#34363A",
+        "primary": "#4DD0E1",
+        "secondary": "#80CBC4",
+        "track_bg": "#111315",
+        "text_main": "#F5F7FA",
+        "text_muted": "#A8ADB5",
+    },
+    "midnight": {
+        "bg_color": "#101A2E",
+        "panel_bg": "#101A2E",
+        "separator_color": "#22304A",
+        "primary": "#5BA7FF",
+        "secondary": "#8B7CFF",
+        "track_bg": "#08101F",
+        "text_main": "#F3F7FF",
+        "text_muted": "#94A3B8",
+    },
+    "forest": {
+        "bg_color": "#14251D",
+        "panel_bg": "#14251D",
+        "separator_color": "#284236",
+        "primary": "#6EE7A8",
+        "secondary": "#A3E635",
+        "track_bg": "#08150F",
+        "text_main": "#F2FFF8",
+        "text_muted": "#9BB8A8",
+    },
+    "rose": {
+        "bg_color": "#2B1624",
+        "panel_bg": "#2B1624",
+        "separator_color": "#472A3B",
+        "primary": "#FB7185",
+        "secondary": "#F472B6",
+        "track_bg": "#1A0B14",
+        "text_main": "#FFF5F7",
+        "text_muted": "#C7A3B0",
+    },
+    "amber": {
+        "bg_color": "#241B12",
+        "panel_bg": "#241B12",
+        "separator_color": "#3F3121",
+        "primary": "#FBBF24",
+        "secondary": "#F97316",
+        "track_bg": "#140E08",
+        "text_main": "#FFF8EA",
+        "text_muted": "#C7B99E",
+    },
+}
+
+
 CONFIG = {
+    "theme": os.environ.get("SYSMON_WIDGET_THEME", "purple"),
     "position": {"anchor": "right", "x": 30, "y": 30},
     "width": 300,
     "bg_color": "#2A1A3E",
@@ -104,3 +169,23 @@ def _load_local_config():
 
 
 _load_local_config()
+
+
+def apply_theme(name=None):
+    theme_name = name or CONFIG.get("theme", "purple")
+    theme = THEMES.get(theme_name, THEMES["purple"])
+    CONFIG["theme"] = theme_name if theme_name in THEMES else "purple"
+    CONFIG["bg_color"] = theme["bg_color"]
+    CONFIG["transparent_color"] = theme["bg_color"]
+    CONFIG["panel_bg"] = theme["panel_bg"]
+    CONFIG["separator_color"] = theme["separator_color"]
+    CONFIG["accent"]["primary"] = theme["primary"]
+    CONFIG["accent"]["secondary"] = theme["secondary"]
+    CONFIG["accent"]["track_bg"] = theme["track_bg"]
+    CONFIG["accent"]["text_main"] = theme["text_main"]
+    CONFIG["accent"]["text_muted"] = theme["text_muted"]
+    CONFIG["sysstat"]["battery_color"] = theme["primary"]
+    CONFIG["sysstat"]["temp_color"] = theme["secondary"]
+
+
+apply_theme()
