@@ -27,25 +27,25 @@ class WeatherPanel:
         bg = self.widget.cget("bg")
         accent = config["accent"]
 
-        self.title = make_label(self.widget, config, text="WEATHER", size=10, color=accent["secondary"], weight="bold")
+        self.title = make_label(self.widget, config, text="WEATHER", size=9, color=accent["secondary"], weight="bold")
         self.title.pack(fill="x")
 
         body = tk.Frame(self.widget, bg=bg)
-        body.pack(fill="both", expand=True, pady=(6, 0))
+        body.pack(fill="both", expand=True, pady=(4, 0))
 
-        self.icon_label = make_label(body, config, text="☁", size=32, color=accent["primary"], anchor="center")
-        self.icon_label.pack(side="left", padx=(0, 8))
+        self.icon_label = make_label(body, config, text="☁", size=24, color=accent["primary"], anchor="center")
+        self.icon_label.pack(side="left", padx=(0, 6))
 
         right = tk.Frame(body, bg=bg)
         right.pack(side="left", fill="both", expand=True)
 
-        self.temp_label = make_label(right, config, text="--°C", size=22, weight="bold")
+        self.temp_label = make_label(right, config, text="--C", size=18, weight="bold")
         self.temp_label.pack(fill="x")
-        self.city_label = make_label(right, config, text=self.weather_config["city"], size=10, color=accent["text_muted"])
+        self.city_label = make_label(right, config, text=self.weather_config["city"], size=8, color=accent["text_muted"])
         self.city_label.pack(fill="x")
-        self.desc_label = make_label(right, config, text="--", size=9, color=accent["text_muted"])
+        self.desc_label = make_label(right, config, text="--", size=8, color=accent["text_muted"])
         self.desc_label.pack(fill="x")
-        self.detail_label = make_label(right, config, text="", size=9, color=accent["text_muted"])
+        self.detail_label = make_label(right, config, text="", size=8, color=accent["text_muted"])
         self.detail_label.pack(fill="x")
         self._refresh()
 
@@ -86,7 +86,7 @@ class WeatherPanel:
         desc = weather.get("description", "unknown").title()
         suffix = " (offline)" if offline else ""
 
-        self.temp_label.configure(text=f"{round(temp) if temp is not None else '--'}°C")
+        self.temp_label.configure(text=f"{round(temp) if temp is not None else '--'}C")
         self.city_label.configure(text=city)
         self.desc_label.configure(text=f"{desc}{suffix}")
         details = []
@@ -101,7 +101,7 @@ class WeatherPanel:
             try:
                 response = requests.get(f"https://openweathermap.org/img/wn/{icon}@2x.png", timeout=8)
                 response.raise_for_status()
-                image = Image.open(BytesIO(response.content)).resize((48, 48))
+                image = Image.open(BytesIO(response.content)).resize((40, 40))
                 self.icon_photo = ImageTk.PhotoImage(image)
                 self.icon_label.configure(image=self.icon_photo, text="")
             except Exception:

@@ -5,7 +5,7 @@ try:
 except ImportError:
     psutil = None
 
-from utils.ui import PanelFrame, format_bytes, make_label
+from utils.ui import PanelFrame, compact_bytes, make_label
 
 
 class ProcessesPanel:
@@ -20,13 +20,13 @@ class ProcessesPanel:
             self.widget,
             config,
             text="TOP PROCESSES",
-            size=10,
+            size=9,
             color=accent["primary"],
             weight="bold",
         ).pack(fill="x")
 
         self.rows_container = tk.Frame(self.widget, bg=bg)
-        self.rows_container.pack(fill="both", expand=True, pady=(6, 0))
+        self.rows_container.pack(fill="both", expand=True, pady=(4, 0))
         self.rows = []
         for _ in range(self.proc_config["top_n"]):
             self.rows.append(self._build_row(self.rows_container))
@@ -47,19 +47,15 @@ class ProcessesPanel:
         accent = self.config["accent"]
         bg = parent.cget("bg")
         wrapper = tk.Frame(parent, bg=bg)
-        wrapper.pack(fill="x", pady=(0, 6))
-        name = make_label(wrapper, self.config, text="--", size=11, weight="bold")
+        wrapper.pack(fill="x", pady=(0, 4))
+        name = make_label(wrapper, self.config, text="--", size=9, weight="bold")
         name.pack(fill="x")
         stats_row = tk.Frame(wrapper, bg=bg)
-        stats_row.pack(fill="x", pady=(2, 0))
-        cpu_icon = make_label(stats_row, self.config, text="⏿", size=9, color=accent["primary"])
-        cpu_val = make_label(stats_row, self.config, text="--", size=10)
-        mem_icon = make_label(stats_row, self.config, text="▥", size=9, color=accent["secondary"])
-        mem_val = make_label(stats_row, self.config, text="--", size=10)
-        cpu_icon.pack(side="left", padx=(0, 4))
-        cpu_val.pack(side="left", padx=(0, 12))
-        mem_icon.pack(side="left", padx=(0, 4))
-        mem_val.pack(side="left")
+        stats_row.pack(fill="x", pady=(1, 0))
+        cpu_val = make_label(stats_row, self.config, text="--", size=8, color=accent["primary"])
+        mem_val = make_label(stats_row, self.config, text="--", size=8, color=accent["secondary"], anchor="e")
+        cpu_val.pack(side="left")
+        mem_val.pack(side="right")
         return {"name": name, "cpu": cpu_val, "mem": mem_val}
 
     def _tick(self):
@@ -67,9 +63,9 @@ class ProcessesPanel:
         for idx, row in enumerate(self.rows):
             if idx < len(procs):
                 p = procs[idx]
-                row["name"].configure(text=self._truncate(p["name"], 22))
+                row["name"].configure(text=self._truncate(p["name"], 16))
                 row["cpu"].configure(text=f"{p['cpu']:.0f}%")
-                row["mem"].configure(text=format_bytes(p["mem"]))
+                row["mem"].configure(text=compact_bytes(p["mem"]))
             else:
                 row["name"].configure(text="--")
                 row["cpu"].configure(text="--")

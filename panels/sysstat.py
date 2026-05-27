@@ -34,7 +34,7 @@ class SysStatPanel:
                 accent["track_bg"],
                 accent["text_main"],
                 bg,
-                font_size=10,
+                font_size=8,
             )
             gauge.canvas.pack()
             make_label(
@@ -75,7 +75,7 @@ class SysStatPanel:
             "cpu": (cpu, f"{cpu:.0f}%"),
             "ram": (ram, f"{ram:.0f}%"),
             "battery": (battery.percent if battery else 0, f"{battery.percent:.0f}%" if battery else "--"),
-            "temp": (min(100, temp) if temp is not None else 0, f"{temp:.0f}°C" if temp is not None else "--"),
+            "temp": (min(100, temp) if temp is not None else 0, f"{temp:.0f}C" if temp is not None else "--"),
         }
 
     def _temperature(self):

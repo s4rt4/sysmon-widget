@@ -1,12 +1,19 @@
+import json
 import time
 import tkinter as tk
+from datetime import date
+from pathlib import Path
 
 try:
     import psutil
 except ImportError:
     psutil = None
 
-from utils.ui import PanelFrame, format_bytes, make_label
+from utils.ui import PanelFrame, compact_bytes, format_bytes, make_label
+
+
+STATE_FILE = Path.home() / ".cache" / "sysmon-widget" / "network.json"
+SAVE_EVERY_TICKS = 30
 
 
 class NetworkPanel:
@@ -17,23 +24,27 @@ class NetworkPanel:
         self.interface = None
         self.last = None
         self.last_time = None
+        self.today_date = date.today().isoformat()
         self.total_down = 0
         self.total_up = 0
+        self._save_counter = 0
+        self._load_state()
 
         accent = config["accent"]
         bg = self.widget.cget("bg")
 
-        self.title = make_label(self.widget, config, text="NETWORK", size=10, color=accent["primary"], weight="bold")
+        self.title = make_label(self.widget, config, text="NETWORK", size=9, color=accent["primary"], weight="bold")
         self.title.pack(fill="x")
 
         row = tk.Frame(self.widget, bg=bg)
-        row.pack(fill="x", pady=(6, 0))
+        row.pack(fill="x", pady=(4, 0))
 
-        self.down_col = self._make_col(row, "Download")
-        self.up_col = self._make_col(row, "Upload")
+        self.down_col = self._make_col(row, "↓ Down")
+        self.up_col = self._make_col(row, "↑ Up")
 
-        self.today = make_label(self.widget, config, text="Today: 0 B", size=10, color=accent["primary"])
-        self.today.pack(fill="x", pady=(6, 0))
+        self.today = make_label(self.widget, config, text="Today: 0B", size=8, color=accent["primary"])
+        self.today.pack(fill="x", pady=(4, 0))
+        self._refresh_today_label()
 
         self._tick()
 
@@ -42,8 +53,8 @@ class NetworkPanel:
         col = tk.Frame(parent, bg=bg)
         col.pack(side="left", fill="both", expand=True)
         accent = self.config["accent"]
-        make_label(col, self.config, text=label, size=10, color=accent["text_muted"]).pack(fill="x")
-        value = make_label(col, self.config, text="-- KB/s", size=12, weight="bold")
+        make_label(col, self.config, text=label, size=8, color=accent["text_muted"]).pack(fill="x")
+        value = make_label(col, self.config, text="--", size=10, weight="bold")
         value.pack(fill="x", pady=(2, 0))
         return value
 
@@ -53,6 +64,13 @@ class NetworkPanel:
             self.widget.after(self.net_config["refresh_ms"], self._tick)
             return
 
+        current_date = date.today().isoformat()
+        if current_date != self.today_date:
+            self.today_date = current_date
+            self.total_down = 0
+            self.total_up = 0
+            self._save_state()
+
         counter = self._counter()
         now = time.time()
         if counter and self.last:
@@ -61,12 +79,21 @@ class NetworkPanel:
             up_speed = max(0, counter.bytes_sent - self.last.bytes_sent) / elapsed
             self.total_down += down_speed * elapsed
             self.total_up += up_speed * elapsed
-            self.down_col.configure(text=f"{format_bytes(down_speed)}/s")
-            self.up_col.configure(text=f"{format_bytes(up_speed)}/s")
-            self.today.configure(text=f"Today: {format_bytes(self.total_down + self.total_up)}")
+            self.down_col.configure(text=f"{compact_bytes(down_speed)}/s")
+            self.up_col.configure(text=f"{compact_bytes(up_speed)}/s")
+            self._refresh_today_label()
+
+            self._save_counter += 1
+            if self._save_counter >= SAVE_EVERY_TICKS:
+                self._save_state()
+                self._save_counter = 0
+
         self.last = counter
         self.last_time = now
         self.widget.after(self.net_config["refresh_ms"], self._tick)
+
+    def _refresh_today_label(self):
+        self.today.configure(text=f"Today: {format_bytes(self.total_down + self.total_up)}")
 
     def _counter(self):
         if self.net_config["interface"] == "auto":
@@ -84,3 +111,23 @@ class NetworkPanel:
         if not candidates:
             return None
         return max(candidates, key=lambda item: item[1])[0]
+
+    def _load_state(self):
+        try:
+            data = json.loads(STATE_FILE.read_text())
+        except (OSError, ValueError):
+            return
+        if data.get("date") == self.today_date:
+            self.total_down = float(data.get("total_down", 0) or 0)
+            self.total_up = float(data.get("total_up", 0) or 0)
+
+    def _save_state(self):
+        try:
+            STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+            STATE_FILE.write_text(json.dumps({
+                "date": self.today_date,
+                "total_down": self.total_down,
+                "total_up": self.total_up,
+            }))
+        except OSError:
+            pass

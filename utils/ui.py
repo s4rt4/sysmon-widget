@@ -45,3 +45,11 @@ def format_bytes(value):
                 return f"{value:.0f}B"
             return f"{value:.2f}{unit}"
         value /= 1024
+
+
+def compact_bytes(value):
+    value = float(max(0, value))
+    for unit, threshold in (("G", 1024**3), ("M", 1024**2), ("K", 1024)):
+        if value >= threshold:
+            return f"{value / threshold:.1f}{unit}"
+    return f"{value:.0f}B"

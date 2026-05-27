@@ -53,14 +53,14 @@ class ClockPanel:
             anchor="w",
         )
         self.date_label.pack(fill="x", pady=(2, 0))
-        self.week_label = make_label(
+        self.seconds_label = make_label(
             right,
             config,
             size=11,
             color=accent["text_muted"],
             anchor="w",
         )
-        self.week_label.pack(fill="x", pady=(2, 0))
+        self.seconds_label.pack(fill="x", pady=(2, 0))
 
         self._tick()
 
@@ -70,5 +70,5 @@ class ClockPanel:
         self.time_label.configure(text=now.strftime(fmt))
         self.day_label.configure(text=ID_DAYS[now.weekday()])
         self.date_label.configure(text=f"{now.day} {ID_MONTHS[now.month - 1]} {now.year}")
-        self.week_label.configure(text=f"{now.isocalendar().week}")
+        self.seconds_label.configure(text=f"{now.second:02d}")
         self.widget.after(1000, self._tick)

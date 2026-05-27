@@ -27,20 +27,6 @@ class MusicPanel:
         row = tk.Frame(self.widget, bg=bg)
         row.pack(fill="both", expand=True)
 
-        left = tk.Frame(row, bg=bg)
-        left.pack(side="left", fill="both", expand=True)
-
-        self.status_label = make_label(left, config, text="▶ Stopped", size=10, color=accent["primary"], weight="bold")
-        self.status_label.pack(fill="x")
-        self.title_label = make_label(left, config, text="No track", size=12, weight="bold")
-        self.title_label.pack(fill="x", pady=(2, 0))
-        self.meta_label = make_label(left, config, text="--", size=9, color=accent["text_muted"])
-        self.meta_label.pack(fill="x")
-        self.time_label = make_label(left, config, text="0:00 / 0:00", size=9, color=accent["text_muted"])
-        self.time_label.pack(fill="x", pady=(4, 0))
-        self.progress = BarMeter(left, 10, 3, accent["primary"], accent["track_bg"], bg)
-        self.progress.canvas.pack(fill="x", pady=(2, 0))
-
         self.vis_canvas = tk.Canvas(
             row,
             width=110,
@@ -50,6 +36,21 @@ class MusicPanel:
         )
         if self.music_config["show_visualizer"]:
             self.vis_canvas.pack(side="right", padx=(8, 0))
+
+        left = tk.Frame(row, bg=bg)
+        left.pack(side="left", fill="both", expand=True)
+
+        self.status_label = make_label(left, config, text="▶ Stopped", size=10, color=accent["primary"], weight="bold")
+        self.status_label.pack(fill="x")
+        self.title_canvas = tk.Canvas(left, height=18, bg=bg, highlightthickness=0)
+        self.title_canvas.pack(fill="x", pady=(2, 0))
+        self.title_offset = 0
+        self.meta_label = make_label(left, config, text="--", size=9, color=accent["text_muted"])
+        self.meta_label.pack(fill="x")
+        self.time_label = make_label(left, config, text="0:00 / 0:00", size=9, color=accent["text_muted"])
+        self.time_label.pack(fill="x", pady=(4, 0))
+        self.progress = BarMeter(left, 10, 3, accent["primary"], accent["track_bg"], bg)
+        self.progress.canvas.pack(fill="x", pady=(2, 0))
 
         self._refresh()
         self._animate()
@@ -62,10 +63,12 @@ class MusicPanel:
         self.duration = info.get("duration", 0)
         title = info.get("title") or "No track"
         artist = info.get("artist") or "Unknown artist"
-        self.title_text = title
-        self.title_label.configure(text=self._truncate(title, 28))
+        if title != self.title_text:
+            self.title_text = title
+            self.title_offset = 0
         self.status_label.configure(text=f"▶ {self.status}" if self.status == "Playing" else f"❚❚ {self.status}")
         self.meta_label.configure(text=self._truncate(artist, 32))
+        self._draw_title()
         self._draw_time()
         self.widget.after(self.music_config["refresh_ms"], self._refresh)
 
@@ -161,7 +164,32 @@ class MusicPanel:
         else:
             self.vis_values = [max(4, v - 3) for v in self.vis_values]
         self._draw_visualizer()
+        self._draw_title()
         self.widget.after(80, self._animate)
+
+    def _draw_title(self):
+        self.title_canvas.delete("all")
+        width = max(1, self.title_canvas.winfo_width())
+        font = (self.config["clock"]["font"], 11, "bold")
+        color = self.config["accent"]["text_main"]
+        text = self.title_text or "No track"
+        # measure full text width
+        measure_id = self.title_canvas.create_text(0, -100, text=text, font=font, anchor="w")
+        bbox = self.title_canvas.bbox(measure_id)
+        text_width = (bbox[2] - bbox[0]) if bbox else 0
+        self.title_canvas.delete(measure_id)
+        if text_width <= width:
+            self.title_canvas.create_text(0, 9, text=text, font=font, fill=color, anchor="w")
+            self.title_offset = 0
+            return
+        # marquee: draw twice (gap then repeat) so it wraps seamlessly
+        gap = 40
+        cycle = text_width + gap
+        x = -self.title_offset
+        self.title_canvas.create_text(x, 9, text=text, font=font, fill=color, anchor="w")
+        self.title_canvas.create_text(x + cycle, 9, text=text, font=font, fill=color, anchor="w")
+        speed = max(0.2, self.music_config.get("marquee_speed", 30) / 80)
+        self.title_offset = (self.title_offset + speed) % cycle
 
     def _draw_visualizer(self):
         self.vis_canvas.delete("all")

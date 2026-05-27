@@ -38,9 +38,9 @@ class FooterPanel:
         cell = tk.Frame(self.widget, bg=bg)
         cell.pack(side="left", fill="both", expand=True)
         color = accent["text_muted"] if text_kind == "label" else accent["primary"]
-        size = 10 if text_kind == "label" else 14
+        size = 9 if text_kind == "label" else 13
         make_label(cell, self.config, text=header, size=size, color=color, weight="bold", anchor="center").pack(fill="x")
-        val = make_label(cell, self.config, text=value, size=11, anchor="center")
+        val = make_label(cell, self.config, text=value, size=9, anchor="center")
         val.pack(fill="x", pady=(2, 0))
         return val
 

@@ -9,6 +9,7 @@ class BarMeter:
         self.track_color = track_color
         self.value = 0.0
         self.canvas = tk.Canvas(parent, width=width, height=height, bg=bg, highlightthickness=0)
+        self.canvas.bind("<Configure>", lambda _e: self._draw())
         self._job = None
         self._draw()
 
@@ -35,12 +36,14 @@ class BarMeter:
 
     def _draw(self):
         self.canvas.delete("all")
-        self.canvas.create_rectangle(0, 0, self.width, self.height, fill=self.track_color, width=0)
+        w = max(1, self.canvas.winfo_width())
+        h = self.height
+        self.canvas.create_rectangle(0, 0, w, h, fill=self.track_color, width=0)
         self.canvas.create_rectangle(
             0,
             0,
-            self.width * (self.value / 100),
-            self.height,
+            w * (self.value / 100),
+            h,
             fill=self.fill_color,
             width=0,
         )
