@@ -7,6 +7,10 @@ except ImportError:  # pragma: no cover - startup continues with panel fallbacks
     psutil = None
 
 from config import CONFIG, THEMES, apply_theme
+from utils.autostart import is_autostart_enabled, toggle_autostart
+from utils.restart import restart_widget
+from utils.settings_dialog import SettingsDialog
+from utils.tray import TrayController
 from utils.window_shape import apply_panel_shape
 from utils.xlib_hints import apply_desktop_hints
 from widget import WidgetLayout
@@ -60,6 +64,7 @@ def main():
     x, y = calculate_position(root, CONFIG["width"], height)
     root.geometry(f"{CONFIG['width']}x{height}+{x}+{y}")
 
+    radius = CONFIG.get("card_radius", 14)
     if not args.managed:
         wid = _get_toplevel_wid(root)
         apply_desktop_hints(
@@ -70,9 +75,14 @@ def main():
             undecorated=True,
         )
         root.deiconify()
-        radius = CONFIG.get("card_radius", 14)
         root.after(120, lambda: _apply_post_map(root, args, radius))
-    root.mainloop()
+
+    tray = _start_tray(root, args, radius)
+    try:
+        root.mainloop()
+    finally:
+        if tray is not None:
+            tray.stop()
 
 
 def _apply_post_map(root, args, radius):
@@ -85,6 +95,77 @@ def _apply_post_map(root, args, radius):
         undecorated=True,
     )
     apply_panel_shape(root, wid=wid, radius=radius)
+
+
+def _start_tray(root, args, radius):
+    state = {"visible": True}
+    dialog = SettingsDialog(root, on_saved=lambda: _on_settings_saved(root))
+    tray = TrayController(
+        root,
+        callbacks={
+            "toggle_visible": lambda: _toggle_visible(root, args, radius, state, tray_ref),
+            "settings": dialog.open,
+            "toggle_autostart": lambda: _toggle_autostart(tray_ref),
+            "restart": lambda: _do_restart(tray_ref),
+            "exit": lambda: _do_exit(root, tray_ref),
+            "is_autostart_enabled": is_autostart_enabled,
+        },
+        accent_color=CONFIG.get("accent", {}).get("primary", "#4DD0E1"),
+        bg_color=CONFIG.get("card_bg", "#161a20"),
+    )
+    tray_ref = {"tray": tray, "state": state}
+    if not tray.is_available():
+        return None
+    tray.start()
+    return tray
+
+
+def _toggle_visible(root, args, radius, state, tray_ref):
+    if state["visible"]:
+        root.withdraw()
+        state["visible"] = False
+    else:
+        root.deiconify()
+        if not args.managed:
+            root.after(120, lambda: _apply_post_map(root, args, radius))
+        state["visible"] = True
+    tray = tray_ref.get("tray") if isinstance(tray_ref, dict) else None
+    if tray is not None:
+        tray.set_visible(state["visible"])
+
+
+def _toggle_autostart(tray_ref):
+    enabled = toggle_autostart()
+    tray = tray_ref.get("tray") if isinstance(tray_ref, dict) else None
+    if tray is not None:
+        tray.set_autostart(enabled)
+
+
+def _do_restart(tray_ref):
+    tray = tray_ref.get("tray") if isinstance(tray_ref, dict) else None
+    if tray is not None:
+        tray.stop()
+    restart_widget()
+
+
+def _do_exit(root, tray_ref):
+    tray = tray_ref.get("tray") if isinstance(tray_ref, dict) else None
+    if tray is not None:
+        tray.stop()
+    try:
+        root.destroy()
+    except Exception:
+        pass
+
+
+def _on_settings_saved(root):
+    from tkinter import messagebox
+    if messagebox.askyesno(
+        "Restart widget",
+        "Settings saved. Restart widget now to apply changes?",
+        parent=root,
+    ):
+        restart_widget()
 
 
 def _get_toplevel_wid(root):
@@ -108,9 +189,13 @@ def _get_toplevel_wid(root):
 
 def calculate_position(root, width, height):
     position = CONFIG["position"]
+    anchor = position.get("anchor", "right")
     y = position.get("y", 30)
-    if position.get("anchor") == "right":
-        x = root.winfo_screenwidth() - width - position.get("x", 30)
+    screen_w = root.winfo_screenwidth()
+    if anchor == "right":
+        x = screen_w - width - position.get("x", 30)
+    elif anchor == "center":
+        x = (screen_w - width) // 2 + position.get("x", 0)
     else:
         x = position.get("x", 30)
     return max(0, x), max(0, y)
