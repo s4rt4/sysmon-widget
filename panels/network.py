@@ -3,10 +3,9 @@ import tkinter as tk
 
 try:
     import psutil
-except ImportError:  # pragma: no cover
+except ImportError:
     psutil = None
 
-from utils.sparkline import Sparkline
 from utils.ui import PanelFrame, format_bytes, make_label
 
 
@@ -21,26 +20,36 @@ class NetworkPanel:
         self.total_down = 0
         self.total_up = 0
 
-        self.down = self._make_row("↓")
-        self.up = self._make_row("↑")
+        accent = config["accent"]
+        bg = self.widget.cget("bg")
+
+        self.title = make_label(self.widget, config, text="NETWORK", size=10, color=accent["primary"], weight="bold")
+        self.title.pack(fill="x")
+
+        row = tk.Frame(self.widget, bg=bg)
+        row.pack(fill="x", pady=(6, 0))
+
+        self.down_col = self._make_col(row, "Download")
+        self.up_col = self._make_col(row, "Upload")
+
+        self.today = make_label(self.widget, config, text="Today: 0 B", size=10, color=accent["primary"])
+        self.today.pack(fill="x", pady=(6, 0))
+
         self._tick()
 
-    def _make_row(self, label):
-        row = tk.Frame(self.widget, bg=self.widget.cget("bg"))
-        row.pack(fill="x", pady=2)
-        icon = make_label(row, self.config, text=label, size=13, color=self.config["accent"]["primary"])
-        value = make_label(row, self.config, text="--", size=11)
-        total = make_label(row, self.config, text="0B", size=10, color=self.config["accent"]["text_muted"], anchor="e")
-        spark = Sparkline(row, 92, 24, self.net_config["history_len"], self.config["accent"]["primary"], self.widget.cget("bg"))
-        icon.pack(side="left")
-        value.pack(side="left", padx=(8, 6))
-        spark.canvas.pack(side="left", fill="x", expand=True)
-        total.pack(side="right")
-        return {"value": value, "total": total, "spark": spark}
+    def _make_col(self, parent, label):
+        bg = parent.cget("bg")
+        col = tk.Frame(parent, bg=bg)
+        col.pack(side="left", fill="both", expand=True)
+        accent = self.config["accent"]
+        make_label(col, self.config, text=label, size=10, color=accent["text_muted"]).pack(fill="x")
+        value = make_label(col, self.config, text="-- KB/s", size=12, weight="bold")
+        value.pack(fill="x", pady=(2, 0))
+        return value
 
     def _tick(self):
         if psutil is None:
-            self.down["value"].configure(text="psutil missing")
+            self.down_col.configure(text="n/a")
             self.widget.after(self.net_config["refresh_ms"], self._tick)
             return
 
@@ -52,12 +61,9 @@ class NetworkPanel:
             up_speed = max(0, counter.bytes_sent - self.last.bytes_sent) / elapsed
             self.total_down += down_speed * elapsed
             self.total_up += up_speed * elapsed
-            self.down["value"].configure(text=format_bytes(down_speed) + "/s")
-            self.up["value"].configure(text=format_bytes(up_speed) + "/s")
-            self.down["total"].configure(text=format_bytes(self.total_down))
-            self.up["total"].configure(text=format_bytes(self.total_up))
-            self.down["spark"].push(down_speed)
-            self.up["spark"].push(up_speed)
+            self.down_col.configure(text=f"{format_bytes(down_speed)}/s")
+            self.up_col.configure(text=f"{format_bytes(up_speed)}/s")
+            self.today.configure(text=f"Today: {format_bytes(self.total_down + self.total_up)}")
         self.last = counter
         self.last_time = now
         self.widget.after(self.net_config["refresh_ms"], self._tick)

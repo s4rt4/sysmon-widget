@@ -3,12 +3,12 @@ import tkinter as tk
 
 try:
     import requests
-except ImportError:  # pragma: no cover
+except ImportError:
     requests = None
 
 try:
     from PIL import Image, ImageTk
-except ImportError:  # pragma: no cover
+except ImportError:
     Image = None
     ImageTk = None
 
@@ -24,29 +24,29 @@ class WeatherPanel:
         self.weather_config = config["weather"]
         self.widget = PanelFrame(parent, config)
         self.icon_photo = None
+        bg = self.widget.cget("bg")
+        accent = config["accent"]
 
-        self.left = tk.Frame(self.widget, bg=self.widget.cget("bg"))
-        self.left.pack(side="left", fill="y", padx=(0, 16))
-        self.right = tk.Frame(self.widget, bg=self.widget.cget("bg"))
-        self.right.pack(side="left", fill="both", expand=True)
+        self.title = make_label(self.widget, config, text="WEATHER", size=10, color=accent["secondary"], weight="bold")
+        self.title.pack(fill="x")
 
-        self.icon_label = make_label(self.left, config, text="☁", size=42, anchor="center")
-        self.icon_label.pack(anchor="center")
+        body = tk.Frame(self.widget, bg=bg)
+        body.pack(fill="both", expand=True, pady=(6, 0))
 
-        self.temp_label = make_label(self.left, config, text="--°C", size=19, weight="bold", anchor="center")
-        self.temp_label.pack(anchor="center", pady=(4, 0))
+        self.icon_label = make_label(body, config, text="☁", size=32, color=accent["primary"], anchor="center")
+        self.icon_label.pack(side="left", padx=(0, 8))
 
-        self.city_label = make_label(self.right, config, text=self.weather_config["city"], size=12, weight="bold")
+        right = tk.Frame(body, bg=bg)
+        right.pack(side="left", fill="both", expand=True)
+
+        self.temp_label = make_label(right, config, text="--°C", size=22, weight="bold")
+        self.temp_label.pack(fill="x")
+        self.city_label = make_label(right, config, text=self.weather_config["city"], size=10, color=accent["text_muted"])
         self.city_label.pack(fill="x")
-
-        self.detail_label = make_label(
-            self.right,
-            config,
-            text="Set OpenWeatherMap API key",
-            size=11,
-            color=config["accent"]["text_muted"],
-        )
-        self.detail_label.pack(fill="x", pady=(4, 0))
+        self.desc_label = make_label(right, config, text="--", size=9, color=accent["text_muted"])
+        self.desc_label.pack(fill="x")
+        self.detail_label = make_label(right, config, text="", size=9, color=accent["text_muted"])
+        self.detail_label.pack(fill="x")
         self._refresh()
 
     def _refresh(self):
@@ -56,7 +56,7 @@ class WeatherPanel:
         elif LAST_WEATHER:
             self._render(LAST_WEATHER, offline=True)
         else:
-            self.detail_label.configure(text="Weather unavailable")
+            self.desc_label.configure(text="Unavailable")
         self.widget.after(self.weather_config["refresh_sec"] * 1000, self._refresh)
 
     def _fetch(self):
@@ -64,10 +64,7 @@ class WeatherPanel:
         key = self.weather_config["api_key"]
         if requests is None or not key or key == "YOUR_OPENWEATHERMAP_API_KEY":
             return None
-        params = {
-            "appid": key,
-            "units": self.weather_config["units"],
-        }
+        params = {"appid": key, "units": self.weather_config["units"]}
         if self.weather_config.get("city_id"):
             params["id"] = self.weather_config["city_id"]
         else:
@@ -87,23 +84,24 @@ class WeatherPanel:
         temp = main.get("temp")
         city = data.get("name", self.weather_config["city"])
         desc = weather.get("description", "unknown").title()
-        suffix = " - offline" if offline else ""
+        suffix = " (offline)" if offline else ""
 
         self.temp_label.configure(text=f"{round(temp) if temp is not None else '--'}°C")
         self.city_label.configure(text=city)
-        details = [f"{desc}{suffix}"]
-        if self.weather_config["show_wind"]:
-            details.append(f"Wind: {wind.get('speed', '--')} m/s")
+        self.desc_label.configure(text=f"{desc}{suffix}")
+        details = []
         if self.weather_config["show_humidity"]:
-            details.append(f"Humidity: {main.get('humidity', '--')}%")
-        self.detail_label.configure(text="\n".join(details))
+            details.append(f"H {main.get('humidity', '--')}%")
+        if self.weather_config["show_wind"]:
+            details.append(f"W {wind.get('speed', '--')}")
+        self.detail_label.configure(text=" ".join(details))
 
         icon = weather.get("icon")
         if icon and requests is not None and Image is not None and ImageTk is not None:
             try:
                 response = requests.get(f"https://openweathermap.org/img/wn/{icon}@2x.png", timeout=8)
                 response.raise_for_status()
-                image = Image.open(BytesIO(response.content)).resize((58, 58))
+                image = Image.open(BytesIO(response.content)).resize((48, 48))
                 self.icon_photo = ImageTk.PhotoImage(image)
                 self.icon_label.configure(image=self.icon_photo, text="")
             except Exception:

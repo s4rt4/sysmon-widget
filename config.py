@@ -5,28 +5,31 @@ from pathlib import Path
 
 THEMES = {
     "purple": {
-        "bg_color": "#2A1A3E",
-        "panel_bg": "#2A1A3E",
+        "bg_color": "#0a0a12",
+        "card_bg": "#1c1830",
+        "panel_bg": "#1c1830",
         "separator_color": "#3A2A50",
         "primary": "#CC44FF",
         "secondary": "#FF44AA",
-        "track_bg": "#1A0F29",
+        "track_bg": "#0d0a18",
         "text_main": "#FFFFFF",
         "text_muted": "#A99BB8",
     },
     "graphite": {
-        "bg_color": "#202124",
-        "panel_bg": "#202124",
-        "separator_color": "#34363A",
+        "bg_color": "#000000",
+        "card_bg": "#161a20",
+        "panel_bg": "#161a20",
+        "separator_color": "#2a2f38",
         "primary": "#4DD0E1",
         "secondary": "#80CBC4",
-        "track_bg": "#111315",
+        "track_bg": "#0a0d12",
         "text_main": "#F5F7FA",
         "text_muted": "#A8ADB5",
     },
     "midnight": {
-        "bg_color": "#101A2E",
-        "panel_bg": "#101A2E",
+        "bg_color": "#05080f",
+        "card_bg": "#101a2e",
+        "panel_bg": "#101a2e",
         "separator_color": "#22304A",
         "primary": "#5BA7FF",
         "secondary": "#8B7CFF",
@@ -35,7 +38,8 @@ THEMES = {
         "text_muted": "#94A3B8",
     },
     "forest": {
-        "bg_color": "#14251D",
+        "bg_color": "#04100a",
+        "card_bg": "#14251D",
         "panel_bg": "#14251D",
         "separator_color": "#284236",
         "primary": "#6EE7A8",
@@ -45,7 +49,8 @@ THEMES = {
         "text_muted": "#9BB8A8",
     },
     "rose": {
-        "bg_color": "#2B1624",
+        "bg_color": "#10070c",
+        "card_bg": "#2B1624",
         "panel_bg": "#2B1624",
         "separator_color": "#472A3B",
         "primary": "#FB7185",
@@ -55,7 +60,8 @@ THEMES = {
         "text_muted": "#C7A3B0",
     },
     "amber": {
-        "bg_color": "#241B12",
+        "bg_color": "#0e0904",
+        "card_bg": "#241B12",
         "panel_bg": "#241B12",
         "separator_color": "#3F3121",
         "primary": "#FBBF24",
@@ -68,35 +74,40 @@ THEMES = {
 
 
 CONFIG = {
-    "theme": os.environ.get("SYSMON_WIDGET_THEME", "purple"),
-    "position": {"anchor": "right", "x": 30, "y": 30},
-    "width": 300,
-    "bg_color": "#2A1A3E",
-    "transparent_color": "#2A1A3E",
+    "theme": os.environ.get("SYSMON_WIDGET_THEME", "graphite"),
+    "position": {"anchor": "right", "x": 16, "y": 16},
+    "width": 320,
+    "bg_color": "#000000",
+    "card_bg": "#161a20",
+    "transparent_color": "#000000",
     "bg_alpha": 1.0,
-    "panel_bg": "#2A1A3E",
-    "separator_color": "#3A2A50",
-    "corner_radius": 0,
-    "panel_gap": 0,
-    "panel_padding": 14,
+    "panel_bg": "#161a20",
+    "separator_color": "#2a2f38",
+    "card_radius": 14,
+    "card_gap": 6,
+    "outer_pad": 4,
+    "panel_padding": 9,
     "accent": {
-        "primary": "#cc44ff",
-        "secondary": "#ff44aa",
-        "text_main": "#ffffff",
-        "text_muted": "#888899",
-        "track_bg": "#1A0F29",
+        "primary": "#4DD0E1",
+        "secondary": "#80CBC4",
+        "text_main": "#F5F7FA",
+        "text_muted": "#A8ADB5",
+        "track_bg": "#0a0d12",
     },
     "panels": {
         "clock": True,
         "weather": True,
         "network": True,
         "sysstat": True,
-        "storage": True,
         "music": True,
+        "storage": True,
+        "processes": True,
+        "footer": True,
     },
     "clock": {
-        "time_font_size": 52,
-        "date_font_size": 14,
+        "time_font_size": 34,
+        "date_font_size": 11,
+        "day_font_size": 15,
         "font": "DejaVu Sans",
         "show_seconds": False,
     },
@@ -120,19 +131,18 @@ CONFIG = {
         "refresh_ms": 1500,
         "show_battery": True,
         "show_temp": True,
-        "ring_size": 58,
-        "ring_width": 6,
+        "ring_size": 44,
+        "ring_width": 5,
         "cpu_color": None,
         "ram_color": None,
-        "battery_color": "#cc44ff",
-        "temp_color": "#ff44aa",
+        "battery_color": None,
+        "temp_color": None,
     },
     "storage": {
         "paths": [
-            {"label": "System", "path": "/"},
-            {"label": "Home", "path": "/home"},
+            {"label": "C:", "path": "/"},
         ],
-        "bar_height": 5,
+        "bar_height": 6,
         "refresh_sec": 30,
     },
     "music": {
@@ -140,8 +150,16 @@ CONFIG = {
         "refresh_ms": 2000,
         "marquee_speed": 30,
         "show_visualizer": True,
-        "vis_bars": 16,
-        "vis_height": 32,
+        "vis_bars": 14,
+        "vis_height": 22,
+    },
+    "processes": {
+        "refresh_ms": 2500,
+        "top_n": 2,
+    },
+    "footer": {
+        "refresh_ms": 2000,
+        "brightness_path": "auto",
     },
 }
 
@@ -172,20 +190,19 @@ _load_local_config()
 
 
 def apply_theme(name=None):
-    theme_name = name or CONFIG.get("theme", "purple")
-    theme = THEMES.get(theme_name, THEMES["purple"])
-    CONFIG["theme"] = theme_name if theme_name in THEMES else "purple"
+    theme_name = name or CONFIG.get("theme", "graphite")
+    theme = THEMES.get(theme_name, THEMES["graphite"])
+    CONFIG["theme"] = theme_name if theme_name in THEMES else "graphite"
     CONFIG["bg_color"] = theme["bg_color"]
     CONFIG["transparent_color"] = theme["bg_color"]
-    CONFIG["panel_bg"] = theme["panel_bg"]
+    CONFIG["card_bg"] = theme["card_bg"]
+    CONFIG["panel_bg"] = theme["card_bg"]
     CONFIG["separator_color"] = theme["separator_color"]
     CONFIG["accent"]["primary"] = theme["primary"]
     CONFIG["accent"]["secondary"] = theme["secondary"]
     CONFIG["accent"]["track_bg"] = theme["track_bg"]
     CONFIG["accent"]["text_main"] = theme["text_main"]
     CONFIG["accent"]["text_muted"] = theme["text_muted"]
-    CONFIG["sysstat"]["battery_color"] = theme["primary"]
-    CONFIG["sysstat"]["temp_color"] = theme["secondary"]
 
 
 apply_theme()

@@ -1,9 +1,10 @@
 import tkinter as tk
 
-from utils.ui import make_separator
 from panels.clock import ClockPanel
+from panels.footer import FooterPanel
 from panels.music import MusicPanel
 from panels.network import NetworkPanel
+from panels.processes import ProcessesPanel
 from panels.storage import StoragePanel
 from panels.sysstat import SysStatPanel
 from panels.weather import WeatherPanel
@@ -14,9 +15,24 @@ PANEL_CLASSES = {
     "weather": WeatherPanel,
     "network": NetworkPanel,
     "sysstat": SysStatPanel,
-    "storage": StoragePanel,
     "music": MusicPanel,
+    "storage": StoragePanel,
+    "processes": ProcessesPanel,
+    "footer": FooterPanel,
 }
+
+
+# (panel_key, row, col, colspan)
+GRID = [
+    ("clock", 0, 0, 2),
+    ("weather", 1, 0, 1),
+    ("network", 1, 1, 1),
+    ("sysstat", 2, 0, 2),
+    ("music", 3, 0, 2),
+    ("storage", 4, 0, 1),
+    ("processes", 4, 1, 1),
+    ("footer", 5, 0, 2),
+]
 
 
 class WidgetLayout:
@@ -26,17 +42,26 @@ class WidgetLayout:
         self.panels = []
 
     def build(self):
-        frame = tk.Frame(self.root, bg=self.config["bg_color"], width=self.config["width"])
-        frame.pack(fill="both", expand=True)
+        outer = self.config.get("outer_pad", 4)
+        gap = self.config.get("card_gap", 6)
+
+        container = tk.Frame(self.root, bg=self.config["bg_color"], padx=outer, pady=outer)
+        container.pack(fill="both", expand=True)
+        container.grid_columnconfigure(0, weight=1, uniform="col")
+        container.grid_columnconfigure(1, weight=1, uniform="col")
 
         enabled = self.config["panels"]
-        first = True
-        for name, panel_class in PANEL_CLASSES.items():
-            if not enabled.get(name, False):
+        for key, row, col, colspan in GRID:
+            if not enabled.get(key, False):
                 continue
-            if not first:
-                make_separator(frame, self.config).pack(fill="x", padx=14)
-            panel = panel_class(frame, self.config)
-            panel.widget.pack(fill="x")
+            panel_class = PANEL_CLASSES[key]
+            panel = panel_class(container, self.config)
+            panel.widget.grid(
+                row=row,
+                column=col,
+                columnspan=colspan,
+                sticky="nsew",
+                padx=gap // 2,
+                pady=gap // 2,
+            )
             self.panels.append(panel)
-            first = False

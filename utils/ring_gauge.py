@@ -1,5 +1,14 @@
 import tkinter as tk
 
+try:
+    from PIL import Image, ImageDraw, ImageTk
+    _PIL_AVAILABLE = True
+except ImportError:
+    _PIL_AVAILABLE = False
+
+
+_SCALE = 4
+
 
 class RingGauge:
     def __init__(self, parent, size, ring_width, color, track_color, text_color, bg, font_size=11):
@@ -8,10 +17,12 @@ class RingGauge:
         self.color = color
         self.track_color = track_color
         self.text_color = text_color
+        self.bg = bg
         self.font_size = font_size
         self.value = 0.0
         self.label_text = "--"
         self.canvas = tk.Canvas(parent, width=size, height=size, bg=bg, highlightthickness=0)
+        self._photo = None
         self._job = None
         self._draw()
 
@@ -43,6 +54,34 @@ class RingGauge:
 
     def _draw(self):
         self.canvas.delete("all")
+        if _PIL_AVAILABLE:
+            self._draw_pil()
+        else:
+            self._draw_tk()
+        self.canvas.create_text(
+            self.size / 2,
+            self.size / 2,
+            text=self.label_text,
+            fill=self.text_color,
+            font=("monospace", self.font_size, "bold"),
+        )
+
+    def _draw_pil(self):
+        s = self.size * _SCALE
+        w = self.ring_width * _SCALE
+        pad = w // 2 + 2 * _SCALE
+        img = Image.new("RGBA", (s, s), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        bbox = (pad, pad, s - pad, s - pad)
+        draw.arc(bbox, start=0, end=360, fill=self.track_color, width=w)
+        if self.value > 0:
+            extent = self.value / 100 * 360
+            draw.arc(bbox, start=-90, end=-90 + extent, fill=self.color, width=w)
+        img = img.resize((self.size, self.size), Image.LANCZOS)
+        self._photo = ImageTk.PhotoImage(img)
+        self.canvas.create_image(0, 0, image=self._photo, anchor="nw")
+
+    def _draw_tk(self):
         pad = self.ring_width + 2
         bounds = (pad, pad, self.size - pad, self.size - pad)
         self.canvas.create_arc(
@@ -53,18 +92,12 @@ class RingGauge:
             outline=self.track_color,
             width=self.ring_width,
         )
-        self.canvas.create_arc(
-            bounds,
-            start=90,
-            extent=-(self.value / 100 * 360),
-            style=tk.ARC,
-            outline=self.color,
-            width=self.ring_width,
-        )
-        self.canvas.create_text(
-            self.size / 2,
-            self.size / 2,
-            text=self.label_text,
-            fill=self.text_color,
-            font=("monospace", self.font_size, "bold"),
-        )
+        if self.value > 0:
+            self.canvas.create_arc(
+                bounds,
+                start=90,
+                extent=-(self.value / 100 * 360),
+                style=tk.ARC,
+                outline=self.color,
+                width=self.ring_width,
+            )

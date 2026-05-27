@@ -2,7 +2,7 @@ import tkinter as tk
 
 try:
     import psutil
-except ImportError:  # pragma: no cover
+except ImportError:
     psutil = None
 
 from utils.ring_gauge import RingGauge
@@ -19,30 +19,42 @@ class SysStatPanel:
         self._tick()
 
     def _build(self):
-        row = tk.Frame(self.widget, bg=self.widget.cget("bg"))
+        bg = self.widget.cget("bg")
+        accent = self.config["accent"]
+        row = tk.Frame(self.widget, bg=bg)
         row.pack(fill="x")
         for key, label, color in self._gauge_defs():
-            cell = tk.Frame(row, bg=self.widget.cget("bg"))
-            cell.pack(side="left", expand=True)
+            cell = tk.Frame(row, bg=bg)
+            cell.pack(side="left", expand=True, fill="both")
             gauge = RingGauge(
                 cell,
                 self.sys_config["ring_size"],
                 self.sys_config["ring_width"],
-                color or self.config["accent"]["primary"],
-                self.config["accent"]["track_bg"],
-                self.config["accent"]["text_main"],
-                self.widget.cget("bg"),
+                color or accent["primary"],
+                accent["track_bg"],
+                accent["text_main"],
+                bg,
+                font_size=10,
             )
             gauge.canvas.pack()
-            make_label(cell, self.config, text=label, size=9, color=self.config["accent"]["text_muted"], anchor="center").pack()
+            make_label(
+                cell,
+                self.config,
+                text=label,
+                size=9,
+                color=accent["text_muted"],
+                anchor="center",
+                weight="bold",
+            ).pack(pady=(4, 0))
             self.gauges[key] = gauge
 
     def _gauge_defs(self):
+        accent = self.config["accent"]
         return [
-            ("cpu", "CPU", self.sys_config["cpu_color"]),
-            ("ram", "RAM", self.sys_config["ram_color"]),
-            ("battery", "BAT", self.sys_config["battery_color"]),
-            ("temp", "TEMP", self.sys_config["temp_color"]),
+            ("cpu", "CPU", self.sys_config.get("cpu_color") or accent["primary"]),
+            ("ram", "RAM", self.sys_config.get("ram_color") or accent["secondary"]),
+            ("battery", "BAT", self.sys_config.get("battery_color") or "#34D399"),
+            ("temp", "TEMP", self.sys_config.get("temp_color") or "#F97316"),
         ]
 
     def _tick(self):

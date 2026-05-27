@@ -1,22 +1,27 @@
-def apply_panel_shape(root, radius=14):
+def apply_panel_shape(root, wid=None, radius=14):
     try:
-        _apply_panel_shape(root, radius)
+        _apply_panel_shape(root, wid, radius)
     except Exception as exc:
         print(f"Window shape unavailable: {exc}")
 
 
-def _apply_panel_shape(root, radius):
+def _apply_panel_shape(root, wid, radius):
     from Xlib import X, display
     from Xlib.ext import shape
 
     root.update_idletasks()
     d = display.Display()
-    win = d.create_resource_object("window", root.winfo_id())
+
+    target_wid = wid if wid is not None else root.winfo_id()
+    win = d.create_resource_object("window", target_wid)
+
+    base_x = root.winfo_rootx()
+    base_y = root.winfo_rooty()
 
     rectangles = []
     for widget in _card_widgets(root):
-        x = widget.winfo_rootx() - root.winfo_rootx()
-        y = widget.winfo_rooty() - root.winfo_rooty()
+        x = widget.winfo_rootx() - base_x
+        y = widget.winfo_rooty() - base_y
         width = widget.winfo_width()
         height = widget.winfo_height()
         rectangles.extend(_rounded_rectangles(x, y, width, height, radius))
@@ -45,7 +50,7 @@ def _rounded_rectangles(x, y, width, height, radius):
         return [(int(x), int(y), int(width), int(height))]
 
     rectangles = []
-    step = 2
+    step = 1
     for yy in range(0, height, step):
         band_h = min(step, height - yy)
         center_y = yy + band_h / 2
@@ -55,5 +60,7 @@ def _rounded_rectangles(x, y, width, height, radius):
         elif center_y > height - radius:
             inset = radius - (radius * radius - (center_y - (height - radius)) ** 2) ** 0.5
         inset = int(round(inset))
-        rectangles.append((int(x + inset), int(y + yy), int(width - inset * 2), int(band_h)))
+        w = width - inset * 2
+        if w > 0:
+            rectangles.append((int(x + inset), int(y + yy), int(w), int(band_h)))
     return rectangles
