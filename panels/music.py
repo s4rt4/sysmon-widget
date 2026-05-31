@@ -36,6 +36,8 @@ class MusicPanel:
             bg=bg,
             highlightthickness=0,
         )
+        if self.music_config["show_visualizer"]:
+            self.vis_canvas.pack(side="right", padx=(8, 0))
 
         left = tk.Frame(row, bg=bg)
         left.pack(side="left", fill="both", expand=True)
@@ -61,8 +63,6 @@ class MusicPanel:
         self.meta_label.pack(fill="x", after=self.title_canvas)
         self.time_label.pack(fill="x", pady=(4, 0), after=self.meta_label)
         self.progress.canvas.pack(fill="x", pady=(2, 0), after=self.time_label)
-        if self.music_config["show_visualizer"]:
-            self.vis_canvas.pack(side="right", padx=(8, 0))
         self._collapsed = False
 
     def _collapse(self):
@@ -72,7 +72,6 @@ class MusicPanel:
         self.meta_label.pack_forget()
         self.time_label.pack_forget()
         self.progress.canvas.pack_forget()
-        self.vis_canvas.pack_forget()
         self._collapsed = True
 
     def _refresh(self):
