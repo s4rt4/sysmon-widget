@@ -61,9 +61,20 @@ The widget degrades gracefully when optional desktop services are unavailable:
 - Music shows stopped/unavailable if no MPRIS2 player or D-Bus binding is available.
 - Battery and temperature gauges show `--` when sensors are unavailable.
 
+## Performance
+
+Idle CPU on a 2-core machine, measured with `top -d 3` over ~60 s:
+
+| Version | Mean | Median |
+|---------|-----:|-------:|
+| 0.1.0   | ~38% | ~38%   |
+| 0.2.0   | ~6%  | ~6%    |
+
+CPU percentages shown in the Top Processes panel are normalized by core count to match Plasma System Monitor.
+
 ## Build Debian Package
 
 ```bash
-packaging/build-deb.sh 1.0.0
-sudo apt install ./dist/sysmon-widget_1.0.0_all.deb
+packaging/build-deb.sh 0.2.0
+sudo apt install ./dist/sysmon-widget_0.2.0_all.deb
 ```
