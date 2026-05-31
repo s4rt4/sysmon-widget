@@ -1,5 +1,6 @@
 from io import BytesIO
 import tkinter as tk
+import tkinter.font as tkfont
 
 try:
     import requests
@@ -43,6 +44,7 @@ class WeatherPanel:
         self.temp_label.pack(fill="x")
         self.city_label = make_label(right, config, text=self.weather_config["city"], size=8, color=accent["text_muted"])
         self.city_label.pack(fill="x")
+        self.city_label.bind("<Configure>", self._fit_city)
         self.desc_label = make_label(right, config, text="--", size=8, color=accent["text_muted"])
         self.desc_label.pack(fill="x")
         self.detail_label = make_label(right, config, text="", size=8, color=accent["text_muted"])
@@ -88,6 +90,7 @@ class WeatherPanel:
 
         self.temp_label.configure(text=f"{round(temp) if temp is not None else '--'}C")
         self.city_label.configure(text=city)
+        self._fit_city()
         self.desc_label.configure(text=f"{desc}{suffix}")
         details = []
         if self.weather_config["show_humidity"]:
@@ -108,3 +111,17 @@ class WeatherPanel:
                 self.icon_label.configure(image="", text="☁")
         else:
             self.icon_label.configure(text="☁")
+
+    def _fit_city(self, _event=None):
+        width = self.city_label.winfo_width()
+        if width <= 1:
+            self.city_label.after(50, self._fit_city)
+            return
+        text = self.city_label.cget("text")
+        family = self.config["clock"]["font"]
+        for size in (8, 7, 6):
+            font = tkfont.Font(family=family, size=size)
+            if font.measure(text) <= width:
+                self.city_label.configure(font=(family, size, "normal"))
+                return
+        self.city_label.configure(font=(family, 6, "normal"))

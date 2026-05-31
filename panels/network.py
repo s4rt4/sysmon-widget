@@ -41,22 +41,22 @@ class NetworkPanel:
         row = tk.Frame(self.widget, bg=bg)
         row.pack(fill="x", pady=(4, 0))
 
-        self.down_col = self._make_col(row, "↓ Down")
-        self.up_col = self._make_col(row, "↑ Up")
+        self.down_col = self._make_col(row, "↓ Down", accent["primary"])
+        self.up_col = self._make_col(row, "↑ Up", accent["secondary"])
 
-        self.today = make_label(self.widget, config, text="Today: 0B", size=8, color=accent["primary"])
+        self.today = make_label(self.widget, config, text="Today: 0B", size=8, color=accent["text_muted"])
         self.today.pack(fill="x", pady=(4, 0))
         self._refresh_today_label()
 
         self._tick()
 
-    def _make_col(self, parent, label):
+    def _make_col(self, parent, label, value_color):
         bg = parent.cget("bg")
         col = tk.Frame(parent, bg=bg)
         col.pack(side="left", fill="both", expand=True)
         accent = self.config["accent"]
         make_label(col, self.config, text=label, size=8, color=accent["text_muted"]).pack(fill="x")
-        value = make_label(col, self.config, text="--", size=10, weight="bold")
+        value = make_label(col, self.config, text="--", size=10, weight="bold", color=value_color)
         value.pack(fill="x", pady=(2, 0))
         return value
 

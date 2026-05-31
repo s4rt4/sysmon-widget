@@ -30,22 +30,20 @@ class FooterPanel:
         self._volume_text = "--"
         self._volume_counter = VOLUME_REFRESH_TICKS
 
-        self.uptime_val = self._make_cell("UPTIME", "--", text_kind="label")
-        self.boot_val = self._make_cell("BOOT", self._boot_text, text_kind="label")
-        self.vol_val = self._make_cell("🔊", "--", text_kind="icon")
-        self.brt_val = self._make_cell("☀", "--", text_kind="icon")
+        self.uptime_val = self._make_cell("UPTIME", "--")
+        self.boot_val = self._make_cell("BOOT", self._boot_text)
+        self.vol_val = self._make_cell("VOL", "--")
+        self.brt_val = self._make_cell("BRT", "--")
 
         self._tick()
 
-    def _make_cell(self, header, value, text_kind="label"):
+    def _make_cell(self, header, value):
         accent = self.config["accent"]
         bg = self.widget.cget("bg")
         cell = tk.Frame(self.widget, bg=bg)
         cell.pack(side="left", fill="both", expand=True)
-        color = accent["text_muted"] if text_kind == "label" else accent["primary"]
-        size = 9 if text_kind == "label" else 13
-        make_label(cell, self.config, text=header, size=size, color=color, weight="bold", anchor="center").pack(fill="x")
-        val = make_label(cell, self.config, text=value, size=9, anchor="center")
+        make_label(cell, self.config, text=header, size=9, color=accent["text_muted"], weight="bold", anchor="center").pack(fill="x")
+        val = make_label(cell, self.config, text=value, size=10, weight="bold", anchor="center")
         val.pack(fill="x", pady=(2, 0))
         return val
 

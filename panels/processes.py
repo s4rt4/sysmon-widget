@@ -48,7 +48,7 @@ class ProcessesPanel:
         accent = self.config["accent"]
         bg = parent.cget("bg")
         wrapper = tk.Frame(parent, bg=bg)
-        wrapper.pack(fill="x", pady=(0, 4))
+        wrapper.pack(fill="x", pady=(0, 6))
         name = make_label(wrapper, self.config, text="--", size=9, weight="bold")
         name.pack(fill="x")
         stats_row = tk.Frame(wrapper, bg=bg)
@@ -57,21 +57,34 @@ class ProcessesPanel:
         mem_val = make_label(stats_row, self.config, text="--", size=8, color=accent["secondary"], anchor="e")
         cpu_val.pack(side="left")
         mem_val.pack(side="right")
-        return {"name": name, "cpu": cpu_val, "mem": mem_val}
+        bar = tk.Canvas(wrapper, height=2, bg=bg, highlightthickness=0)
+        bar.pack(fill="x", pady=(2, 0))
+        return {"name": name, "cpu": cpu_val, "mem": mem_val, "bar": bar}
 
     def _tick(self):
         procs = self._top_processes()
+        accent = self.config["accent"]
         for idx, row in enumerate(self.rows):
             if idx < len(procs):
                 p = procs[idx]
                 row["name"].configure(text=self._truncate(p["name"], 16))
                 row["cpu"].configure(text=f"{p['cpu']:.0f}%")
                 row["mem"].configure(text=compact_bytes(p["mem"]))
+                self._draw_bar(row["bar"], p["cpu"], accent["primary"])
             else:
                 row["name"].configure(text="--")
                 row["cpu"].configure(text="--")
                 row["mem"].configure(text="--")
+                self._draw_bar(row["bar"], 0, accent["primary"])
         self.widget.after(self.proc_config["refresh_ms"], self._tick)
+
+    def _draw_bar(self, canvas, pct, color):
+        canvas.delete("all")
+        width = max(1, canvas.winfo_width())
+        fill_w = max(0, min(width, int(width * pct / 100)))
+        canvas.create_rectangle(0, 0, width, 2, fill=self.config["accent"]["track_bg"], width=0, stipple="gray25")
+        if fill_w > 0:
+            canvas.create_rectangle(0, 0, fill_w, 2, fill=color, width=0)
 
     def _truncate(self, text, max_chars):
         if len(text) > max_chars:

@@ -36,42 +36,68 @@ class MusicPanel:
             bg=bg,
             highlightthickness=0,
         )
-        if self.music_config["show_visualizer"]:
-            self.vis_canvas.pack(side="right", padx=(8, 0))
 
         left = tk.Frame(row, bg=bg)
         left.pack(side="left", fill="both", expand=True)
 
-        self.status_label = make_label(left, config, text="▶ Stopped", size=10, color=accent["primary"], weight="bold")
+        self.status_label = make_label(left, config, text="♪ No media", size=10, color=accent["text_muted"], weight="bold")
         self.status_label.pack(fill="x")
         self.title_canvas = tk.Canvas(left, height=18, bg=bg, highlightthickness=0)
-        self.title_canvas.pack(fill="x", pady=(2, 0))
         self.title_offset = 0
-        self.meta_label = make_label(left, config, text="--", size=9, color=accent["text_muted"])
-        self.meta_label.pack(fill="x")
+        self.meta_label = make_label(left, config, text="", size=9, color=accent["text_muted"])
         self.time_label = make_label(left, config, text="0:00 / 0:00", size=9, color=accent["text_muted"])
-        self.time_label.pack(fill="x", pady=(4, 0))
         self.progress = BarMeter(left, 10, 3, accent["primary"], accent["track_bg"], bg)
-        self.progress.canvas.pack(fill="x", pady=(2, 0))
+        self._collapsed = True
+        self._has_track = False
 
         self._refresh()
         self._animate()
         self._local_second()
+
+    def _expand(self):
+        if not self._collapsed:
+            return
+        self.title_canvas.pack(fill="x", pady=(2, 0), after=self.status_label)
+        self.meta_label.pack(fill="x", after=self.title_canvas)
+        self.time_label.pack(fill="x", pady=(4, 0), after=self.meta_label)
+        self.progress.canvas.pack(fill="x", pady=(2, 0), after=self.time_label)
+        if self.music_config["show_visualizer"]:
+            self.vis_canvas.pack(side="right", padx=(8, 0))
+        self._collapsed = False
+
+    def _collapse(self):
+        if self._collapsed:
+            return
+        self.title_canvas.pack_forget()
+        self.meta_label.pack_forget()
+        self.time_label.pack_forget()
+        self.progress.canvas.pack_forget()
+        self.vis_canvas.pack_forget()
+        self._collapsed = True
 
     def _refresh(self):
         info = self._mpris_info()
         self.status = info["status"]
         self.position = info.get("position", 0)
         self.duration = info.get("duration", 0)
-        title = info.get("title") or "No track"
-        artist = info.get("artist") or "Unknown artist"
+        accent = self.config["accent"]
+        title = info.get("title") or ""
+        artist = info.get("artist") or ""
+        has_track = bool(title)
         if title != self.title_text:
             self.title_text = title
             self.title_offset = 0
-        self.status_label.configure(text=f"▶ {self.status}" if self.status == "Playing" else f"❚❚ {self.status}")
-        self.meta_label.configure(text=self._truncate(artist, 32))
-        self._draw_title()
-        self._draw_time()
+        self._has_track = has_track
+        if has_track:
+            self._expand()
+            icon = "▶" if self.status == "Playing" else "❚❚"
+            self.status_label.configure(text=f"{icon} {self.status}", fg=accent["primary"])
+            self.meta_label.configure(text=self._truncate(artist or "Unknown artist", 32))
+            self._draw_title()
+            self._draw_time()
+        else:
+            self._collapse()
+            self.status_label.configure(text="♪ No media", fg=accent["text_muted"])
         base_ms = self.music_config["refresh_ms"]
         delay = base_ms if self.status == "Playing" else max(base_ms, 5000)
         self.widget.after(delay, self._refresh)

@@ -86,7 +86,7 @@ CONFIG = {
     "card_radius": 14,
     "card_gap": 6,
     "outer_pad": 4,
-    "panel_padding": 9,
+    "panel_padding": 11,
     "accent": {
         "primary": "#4DD0E1",
         "secondary": "#80CBC4",
