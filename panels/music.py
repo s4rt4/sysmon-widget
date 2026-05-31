@@ -21,6 +21,8 @@ class MusicPanel:
         self.duration = 0
         self.title_text = ""
         self.vis_values = [4] * self.music_config["vis_bars"]
+        self._vis_drawn_idle = False
+        self._title_scrolling = False
         accent = config["accent"]
         bg = self.widget.cget("bg")
 
@@ -70,7 +72,9 @@ class MusicPanel:
         self.meta_label.configure(text=self._truncate(artist, 32))
         self._draw_title()
         self._draw_time()
-        self.widget.after(self.music_config["refresh_ms"], self._refresh)
+        base_ms = self.music_config["refresh_ms"]
+        delay = base_ms if self.status == "Playing" else max(base_ms, 5000)
+        self.widget.after(delay, self._refresh)
 
     def _truncate(self, text, max_chars):
         if len(text) > max_chars:
@@ -117,19 +121,33 @@ class MusicPanel:
 
     def _playerctl_info(self):
         player = self.music_config.get("preferred_player", "dopamine")
+        sep = "\x1f"
+        fmt = sep.join([
+            "{{status}}",
+            "{{title}}",
+            "{{artist}}",
+            "{{album}}",
+            "{{position}}",
+            "{{mpris:length}}",
+        ])
         try:
-            status = self._playerctl(["status"], player)
-            title = self._playerctl(["metadata", "title"], player)
-            artist = self._playerctl(["metadata", "artist"], player)
-            album = self._playerctl(["metadata", "album"], player)
-            position_text = self._playerctl(["position"], player)
-            duration_text = self._playerctl(["metadata", "mpris:length"], player)
+            result = subprocess.run(
+                ["playerctl", "-p", player, "metadata", "--format", fmt],
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=1,
+            )
         except (OSError, subprocess.SubprocessError):
             return None
+        parts = result.stdout.strip().split(sep)
+        if len(parts) < 6:
+            return None
+        status, title, artist, album, position_text, duration_text = parts[:6]
         if not title:
             return None
         try:
-            position = int(float(position_text) * 1_000_000)
+            position = int(float(position_text))
         except ValueError:
             position = 0
         try:
@@ -145,27 +163,27 @@ class MusicPanel:
             "duration": duration,
         }
 
-    def _playerctl(self, args, player):
-        result = subprocess.run(
-            ["playerctl", "-p", player, *args],
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=1,
-        )
-        return result.stdout.strip()
-
     def _animate(self):
-        if self.status == "Playing":
+        playing = self.status == "Playing"
+        if playing:
             self.vis_values = [
                 max(4, min(self.music_config["vis_height"], v + random.randint(-6, 8)))
                 for v in self.vis_values
             ]
+            self._draw_visualizer()
+            self._vis_drawn_idle = False
+            vis_settled = False
         else:
             self.vis_values = [max(4, v - 3) for v in self.vis_values]
-        self._draw_visualizer()
-        self._draw_title()
-        self.widget.after(80, self._animate)
+            all_idle = all(v <= 4 for v in self.vis_values)
+            if not (all_idle and self._vis_drawn_idle):
+                self._draw_visualizer()
+                self._vis_drawn_idle = all_idle
+            vis_settled = all_idle
+        if self._title_scrolling:
+            self._draw_title()
+        active = playing or self._title_scrolling or not vis_settled
+        self.widget.after(80 if active else 250, self._animate)
 
     def _draw_title(self):
         self.title_canvas.delete("all")
@@ -181,6 +199,7 @@ class MusicPanel:
         if text_width <= width:
             self.title_canvas.create_text(0, 9, text=text, font=font, fill=color, anchor="w")
             self.title_offset = 0
+            self._title_scrolling = False
             return
         # marquee: draw twice (gap then repeat) so it wraps seamlessly
         gap = 40
@@ -190,6 +209,7 @@ class MusicPanel:
         self.title_canvas.create_text(x + cycle, 9, text=text, font=font, fill=color, anchor="w")
         speed = max(0.2, self.music_config.get("marquee_speed", 30) / 80)
         self.title_offset = (self.title_offset + speed) % cycle
+        self._title_scrolling = True
 
     def _draw_visualizer(self):
         self.vis_canvas.delete("all")

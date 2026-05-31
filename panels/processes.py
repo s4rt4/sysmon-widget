@@ -13,6 +13,7 @@ class ProcessesPanel:
         self.config = config
         self.proc_config = config["processes"]
         self.widget = PanelFrame(parent, config)
+        self.cpu_count = (psutil.cpu_count() or 1) if psutil else 1
         accent = config["accent"]
         bg = self.widget.cget("bg")
 
@@ -80,14 +81,22 @@ class ProcessesPanel:
     def _top_processes(self):
         if psutil is None:
             return []
-        result = []
+        top_n = self.proc_config["top_n"]
+        candidates = []
         for proc in psutil.process_iter(["name"]):
             try:
-                cpu = proc.cpu_percent(interval=None)
-                mem = proc.memory_info().rss
+                cpu = proc.cpu_percent(interval=None) / self.cpu_count
                 name = proc.info.get("name") or "?"
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+            candidates.append((cpu, name, proc))
+        candidates.sort(key=lambda c: c[0], reverse=True)
+        result = []
+        for cpu, name, proc in candidates[: top_n * 2]:
+            try:
+                mem = proc.memory_info().rss
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
             result.append({"name": name, "cpu": cpu, "mem": mem})
         result.sort(key=lambda p: (p["cpu"], p["mem"]), reverse=True)
-        return result[: self.proc_config["top_n"]]
+        return result[:top_n]

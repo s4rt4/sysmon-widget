@@ -14,6 +14,7 @@ from utils.ui import PanelFrame, compact_bytes, format_bytes, make_label
 
 STATE_FILE = Path.home() / ".cache" / "sysmon-widget" / "network.json"
 SAVE_EVERY_TICKS = 30
+INTERFACE_RECHECK_TICKS = 30
 
 
 class NetworkPanel:
@@ -28,6 +29,7 @@ class NetworkPanel:
         self.total_down = 0
         self.total_up = 0
         self._save_counter = 0
+        self._iface_counter = INTERFACE_RECHECK_TICKS
         self._load_state()
 
         accent = config["accent"]
@@ -96,17 +98,19 @@ class NetworkPanel:
         self.today.configure(text=f"Today: {format_bytes(self.total_down + self.total_up)}")
 
     def _counter(self):
-        if self.net_config["interface"] == "auto":
-            self.interface = self._active_interface()
-        else:
+        counters = psutil.net_io_counters(pernic=True)
+        if self.net_config["interface"] != "auto":
             self.interface = self.net_config["interface"]
+        else:
+            self._iface_counter += 1
+            if self.interface is None or self._iface_counter >= INTERFACE_RECHECK_TICKS:
+                self.interface = self._active_interface(counters)
+                self._iface_counter = 0
         if self.interface is None:
             return None
-        counters = psutil.net_io_counters(pernic=True)
         return counters.get(self.interface)
 
-    def _active_interface(self):
-        counters = psutil.net_io_counters(pernic=True)
+    def _active_interface(self, counters):
         candidates = [(name, c.bytes_recv + c.bytes_sent) for name, c in counters.items() if name != "lo"]
         if not candidates:
             return None

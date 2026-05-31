@@ -13,6 +13,7 @@ from utils.ui import PanelFrame, make_label
 
 
 ID_MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+VOLUME_REFRESH_TICKS = 3
 
 
 class FooterPanel:
@@ -24,9 +25,13 @@ class FooterPanel:
         bg = self.widget.cget("bg")
 
         self._brightness_path = self._detect_brightness()
+        self._boot_time = psutil.boot_time() if psutil else None
+        self._boot_text = self._format_boot()
+        self._volume_text = "--"
+        self._volume_counter = VOLUME_REFRESH_TICKS
 
         self.uptime_val = self._make_cell("UPTIME", "--", text_kind="label")
-        self.boot_val = self._make_cell("BOOT", "--", text_kind="label")
+        self.boot_val = self._make_cell("BOOT", self._boot_text, text_kind="label")
         self.vol_val = self._make_cell("🔊", "--", text_kind="icon")
         self.brt_val = self._make_cell("☀", "--", text_kind="icon")
 
@@ -46,24 +51,27 @@ class FooterPanel:
 
     def _tick(self):
         self.uptime_val.configure(text=self._uptime())
-        self.boot_val.configure(text=self._boot())
-        self.vol_val.configure(text=self._volume())
+        self._volume_counter += 1
+        if self._volume_counter >= VOLUME_REFRESH_TICKS:
+            self._volume_text = self._volume()
+            self._volume_counter = 0
+        self.vol_val.configure(text=self._volume_text)
         self.brt_val.configure(text=self._brightness())
         self.widget.after(self.footer_config["refresh_ms"], self._tick)
 
     def _uptime(self):
-        if psutil is None:
+        if self._boot_time is None:
             return "--"
-        secs = int(time.time() - psutil.boot_time())
+        secs = int(time.time() - self._boot_time)
         h, m = divmod(secs // 60, 60)
         if h > 0:
             return f"{h}h {m}m"
         return f"{m}m"
 
-    def _boot(self):
-        if psutil is None:
+    def _format_boot(self):
+        if self._boot_time is None:
             return "--"
-        bt = datetime.fromtimestamp(psutil.boot_time())
+        bt = datetime.fromtimestamp(self._boot_time)
         return f"{bt.day} {ID_MONTHS_SHORT[bt.month - 1]} {bt.hour:02d}:{bt.minute:02d}"
 
     def _volume(self):
