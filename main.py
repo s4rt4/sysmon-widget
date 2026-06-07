@@ -68,11 +68,7 @@ def main():
 
     layout = WidgetLayout(root, CONFIG, controls=controls)
     layout.build()
-    root.update_idletasks()
-
-    height = max(1, root.winfo_reqheight())
-    x, y = calculate_position(root, CONFIG["width"], height)
-    root.geometry(f"{CONFIG['width']}x{height}+{x}+{y}")
+    _resize_to_content(root)
 
     if not args.managed:
         wid = _get_toplevel_wid(root)
@@ -86,6 +82,8 @@ def main():
         root.deiconify()
         root.after(120, lambda: _apply_post_map(root, args, radius))
 
+    _bind_relayout(root, args, radius)
+
     tray = _start_tray(root, controls)
     tray_holder["tray"] = tray
     try:
@@ -93,6 +91,51 @@ def main():
     finally:
         if tray is not None:
             tray.stop()
+
+
+def _resize_to_content(root):
+    # Window height is content-driven: panels like music grow/shrink at runtime
+    # (track starts -> title/progress appear). Recompute reqheight and re-anchor.
+    root.update_idletasks()
+    height = max(1, root.winfo_reqheight())
+    x, y = calculate_position(root, CONFIG["width"], height)
+    root.geometry(f"{CONFIG['width']}x{height}+{x}+{y}")
+    return height
+
+
+def _relayout(root, args, radius):
+    # Content changed size: resize the window, then rebuild the rounded-corner
+    # shape mask so cards below the change aren't clipped by a stale mask.
+    _resize_to_content(root)
+    if not args.managed:
+        wid = _get_toplevel_wid(root)
+        apply_panel_shape(root, wid=wid, radius=radius)
+
+
+def _bind_relayout(root, args, radius):
+    # Two triggers feed one relayout: panels emit <<RelayoutRequest>> when they
+    # expand/collapse, and <Map> fires when the compositor remaps the window on a
+    # workspace switch -- which can drop the shape mask and stacking hints.
+    state = {"pending": False}
+
+    def run_relayout():
+        state["pending"] = False
+        _relayout(root, args, radius)
+
+    def schedule(_event=None):
+        if state["pending"]:
+            return
+        state["pending"] = True
+        root.after_idle(run_relayout)
+
+    root.bind("<<RelayoutRequest>>", schedule, add="+")
+
+    if not args.managed:
+        def on_map(event):
+            if event.widget is root:
+                root.after(120, lambda: _apply_post_map(root, args, radius))
+
+        root.bind("<Map>", on_map, add="+")
 
 
 def _apply_post_map(root, args, radius):

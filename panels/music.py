@@ -64,6 +64,7 @@ class MusicPanel:
         self.time_label.pack(fill="x", pady=(4, 0), after=self.meta_label)
         self.progress.canvas.pack(fill="x", pady=(2, 0), after=self.time_label)
         self._collapsed = False
+        self._request_relayout()
 
     def _collapse(self):
         if self._collapsed:
@@ -73,6 +74,15 @@ class MusicPanel:
         self.time_label.pack_forget()
         self.progress.canvas.pack_forget()
         self._collapsed = True
+        self._request_relayout()
+
+    def _request_relayout(self):
+        # Our height just changed; ask the toplevel to resize + rebuild its shape
+        # mask. Generated on the toplevel so the root's binding receives it.
+        try:
+            self.widget.winfo_toplevel().event_generate("<<RelayoutRequest>>", when="tail")
+        except tk.TclError:
+            pass
 
     def _refresh(self):
         info = self._mpris_info()
