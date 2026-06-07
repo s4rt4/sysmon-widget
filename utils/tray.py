@@ -52,9 +52,21 @@ class TrayController:
             "sysmon-widget",
             menu=self._build_menu(),
         )
-        self._thread = threading.Thread(target=self._icon.run, daemon=True)
+        self._thread = threading.Thread(target=self._run_icon, daemon=True)
         self._thread.start()
         return True
+
+    def _run_icon(self):
+        # The GTK/AppIndicator backend installs a SIGINT handler, which only
+        # works on the main thread; that thread belongs to Tk's mainloop here,
+        # so a background-thread tray cannot run. On GNOME there is no tray host
+        # anyway -- the in-widget gear menu is the control surface. Fail quietly
+        # instead of dumping a traceback from the worker thread.
+        try:
+            self._icon.run()
+        except Exception as exc:
+            print(f"Tray unavailable, using the gear menu instead: {exc}", flush=True)
+            self._icon = None
 
     def stop(self):
         if self._icon is not None:
