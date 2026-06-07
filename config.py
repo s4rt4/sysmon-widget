@@ -75,7 +75,7 @@ THEMES = {
 
 CONFIG = {
     "theme": os.environ.get("SYSMON_WIDGET_THEME", "graphite"),
-    "position": {"anchor": "right", "x": 16, "y": 16},
+    "position": {"anchor": "left", "x": 16, "y": 16},
     "width": 320,
     "bg_color": "#000000",
     "card_bg": "#161a20",

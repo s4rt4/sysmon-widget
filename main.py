@@ -56,7 +56,17 @@ def main():
     if not args.managed:
         root.withdraw()
 
-    layout = WidgetLayout(root, CONFIG)
+    radius = CONFIG.get("card_radius", 14)
+
+    # Controls shared by the in-widget gear menu and the optional tray. The tray
+    # is attached after creation via tray_holder; on GNOME there is usually no
+    # tray, so the gear button in the footer is the primary control surface.
+    state = {"visible": True}
+    tray_holder = {"tray": None}
+    dialog = SettingsDialog(root, on_saved=lambda: _on_settings_saved(root))
+    controls = _build_controls(root, args, radius, state, tray_holder, dialog)
+
+    layout = WidgetLayout(root, CONFIG, controls=controls)
     layout.build()
     root.update_idletasks()
 
@@ -64,7 +74,6 @@ def main():
     x, y = calculate_position(root, CONFIG["width"], height)
     root.geometry(f"{CONFIG['width']}x{height}+{x}+{y}")
 
-    radius = CONFIG.get("card_radius", 14)
     if not args.managed:
         wid = _get_toplevel_wid(root)
         apply_desktop_hints(
@@ -77,7 +86,8 @@ def main():
         root.deiconify()
         root.after(120, lambda: _apply_post_map(root, args, radius))
 
-    tray = _start_tray(root, args, radius)
+    tray = _start_tray(root, controls)
+    tray_holder["tray"] = tray
     try:
         root.mainloop()
     finally:
@@ -97,65 +107,72 @@ def _apply_post_map(root, args, radius):
     apply_panel_shape(root, wid=wid, radius=radius)
 
 
-def _start_tray(root, args, radius):
-    state = {"visible": True}
-    dialog = SettingsDialog(root, on_saved=lambda: _on_settings_saved(root))
+def _build_controls(root, args, radius, state, tray_holder, dialog):
+    """Build the action callbacks shared by the gear menu and the tray.
+
+    All tray interactions go through tray_holder["tray"], which stays None when
+    no tray is available (the common case on GNOME) -- the callbacks then simply
+    skip the tray-sync step and still drive the widget.
+    """
+
+    def _tray():
+        return tray_holder.get("tray")
+
+    def toggle_visible():
+        if state["visible"]:
+            root.withdraw()
+            state["visible"] = False
+        else:
+            root.deiconify()
+            if not args.managed:
+                root.after(120, lambda: _apply_post_map(root, args, radius))
+            state["visible"] = True
+        tray = _tray()
+        if tray is not None:
+            tray.set_visible(state["visible"])
+
+    def toggle_autostart_cb():
+        enabled = toggle_autostart()
+        tray = _tray()
+        if tray is not None:
+            tray.set_autostart(enabled)
+
+    def restart_cb():
+        tray = _tray()
+        if tray is not None:
+            tray.stop()
+        restart_widget()
+
+    def exit_cb():
+        tray = _tray()
+        if tray is not None:
+            tray.stop()
+        try:
+            root.destroy()
+        except Exception:
+            pass
+
+    return {
+        "toggle_visible": toggle_visible,
+        "settings": dialog.open,
+        "toggle_autostart": toggle_autostart_cb,
+        "restart": restart_cb,
+        "exit": exit_cb,
+        "is_autostart_enabled": is_autostart_enabled,
+    }
+
+
+def _start_tray(root, controls):
     tray = TrayController(
         root,
-        callbacks={
-            "toggle_visible": lambda: _toggle_visible(root, args, radius, state, tray_ref),
-            "settings": dialog.open,
-            "toggle_autostart": lambda: _toggle_autostart(tray_ref),
-            "restart": lambda: _do_restart(tray_ref),
-            "exit": lambda: _do_exit(root, tray_ref),
-            "is_autostart_enabled": is_autostart_enabled,
-        },
+        callbacks=controls,
         accent_color=CONFIG.get("accent", {}).get("primary", "#4DD0E1"),
         bg_color=CONFIG.get("card_bg", "#161a20"),
     )
-    tray_ref = {"tray": tray, "state": state}
     if not tray.is_available():
         return None
     tray.start()
     return tray
-
-
-def _toggle_visible(root, args, radius, state, tray_ref):
-    if state["visible"]:
-        root.withdraw()
-        state["visible"] = False
-    else:
-        root.deiconify()
-        if not args.managed:
-            root.after(120, lambda: _apply_post_map(root, args, radius))
-        state["visible"] = True
-    tray = tray_ref.get("tray") if isinstance(tray_ref, dict) else None
-    if tray is not None:
-        tray.set_visible(state["visible"])
-
-
-def _toggle_autostart(tray_ref):
-    enabled = toggle_autostart()
-    tray = tray_ref.get("tray") if isinstance(tray_ref, dict) else None
-    if tray is not None:
-        tray.set_autostart(enabled)
-
-
-def _do_restart(tray_ref):
-    tray = tray_ref.get("tray") if isinstance(tray_ref, dict) else None
-    if tray is not None:
-        tray.stop()
-    restart_widget()
-
-
-def _do_exit(root, tray_ref):
-    tray = tray_ref.get("tray") if isinstance(tray_ref, dict) else None
-    if tray is not None:
-        tray.stop()
-    try:
-        root.destroy()
-    except Exception:
-        pass
 
 
 def _on_settings_saved(root):

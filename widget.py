@@ -36,9 +36,10 @@ GRID = [
 
 
 class WidgetLayout:
-    def __init__(self, root, config):
+    def __init__(self, root, config, controls=None):
         self.root = root
         self.config = config
+        self.controls = controls
         self.panels = []
 
     def build(self):
@@ -55,7 +56,10 @@ class WidgetLayout:
             if not enabled.get(key, False):
                 continue
             panel_class = PANEL_CLASSES[key]
-            panel = panel_class(container, self.config)
+            if key == "clock":
+                panel = panel_class(container, self.config, controls=self.controls)
+            else:
+                panel = panel_class(container, self.config)
             panel.widget.grid(
                 row=row,
                 column=col,
