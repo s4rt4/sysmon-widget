@@ -18,6 +18,7 @@ cp "$ROOT_DIR"/main.py "$ROOT_DIR"/config.py "$ROOT_DIR"/widget.py \
 cp "$ROOT_DIR"/panels/*.py "$STAGE/panels/"
 cp "$ROOT_DIR"/utils/*.py "$STAGE/utils/"
 cp "$ROOT_DIR"/packaging/sysmon-widget.desktop "$STAGE/packaging/"
+cp "$ROOT_DIR"/packaging/sysmon-widget.svg "$STAGE/packaging/"
 
 tar -C "$TOPDIR" -czf "$TOPDIR/SOURCES/${PKG}-${VERSION}.tar.gz" "${PKG}-${VERSION}"
 

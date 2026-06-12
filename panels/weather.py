@@ -1,4 +1,5 @@
 from io import BytesIO
+import math
 import tkinter as tk
 import tkinter.font as tkfont
 
@@ -8,9 +9,10 @@ except ImportError:
     requests = None
 
 try:
-    from PIL import Image, ImageTk
+    from PIL import Image, ImageDraw, ImageTk
 except ImportError:
     Image = None
+    ImageDraw = None
     ImageTk = None
 
 from utils.ui import PanelFrame, make_label
@@ -100,17 +102,29 @@ class WeatherPanel:
         self.detail_label.configure(text=" ".join(details))
 
         icon = weather.get("icon")
+        # Draw a condition-appropriate vector icon first so the glyph stays
+        # dynamic (and non-emoji) even when the PNG can't be downloaded.
+        self._set_drawn_icon(icon)
         if icon and requests is not None and Image is not None and ImageTk is not None:
             try:
                 response = requests.get(f"https://openweathermap.org/img/wn/{icon}@2x.png", timeout=8)
                 response.raise_for_status()
-                image = Image.open(BytesIO(response.content)).resize((40, 40))
+                image = Image.open(BytesIO(response.content)).resize((40, 40), Image.LANCZOS)
                 self.icon_photo = ImageTk.PhotoImage(image)
                 self.icon_label.configure(image=self.icon_photo, text="")
             except Exception:
-                self.icon_label.configure(image="", text="☁")
-        else:
-            self.icon_label.configure(text="☁")
+                self._set_drawn_icon(icon)
+
+    def _set_drawn_icon(self, icon):
+        if Image is None or ImageDraw is None or ImageTk is None:
+            self.icon_label.configure(image="", text="--")
+            return
+        image = _draw_weather_icon(icon, self.config["accent"])
+        if image is None:
+            self.icon_label.configure(image="", text="--")
+            return
+        self.icon_photo = ImageTk.PhotoImage(image)
+        self.icon_label.configure(image=self.icon_photo, text="")
 
     def _fit_city(self, _event=None):
         width = self.city_label.winfo_width()
@@ -125,3 +139,91 @@ class WeatherPanel:
                 self.city_label.configure(font=(family, size, "normal"))
                 return
         self.city_label.configure(font=(family, 6, "normal"))
+
+
+def _draw_weather_icon(code, accent, size=40, ss=4):
+    """Render a flat, non-emoji weather glyph for an OpenWeatherMap icon code.
+
+    Supersampled then downscaled with LANCZOS for smooth edges. Returns a PIL
+    Image (RGBA) or None if PIL is unavailable.
+    """
+    if Image is None or ImageDraw is None:
+        return None
+    code = code or ""
+    night = code.endswith("n")
+    group = code[:2]
+
+    W = size * ss
+    img = Image.new("RGBA", (W, W), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+
+    sun_col = "#FBBF24"
+    moon_col = "#E2E8F0"
+    cloud_col = accent.get("secondary", "#B0BEC5")
+    rain_col = accent.get("primary", "#4DD0E1")
+    snow_col = "#E2E8F0"
+    bolt_col = "#FBBF24"
+    mist_col = accent.get("text_muted", "#A8ADB5")
+    lw = max(2, int(W * 0.05))
+
+    def sun(cx, cy, r, col=sun_col):
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=col)
+        for i in range(8):
+            a = math.radians(i * 45)
+            x0 = cx + math.cos(a) * r * 1.3
+            y0 = cy + math.sin(a) * r * 1.3
+            x1 = cx + math.cos(a) * r * 1.75
+            y1 = cy + math.sin(a) * r * 1.75
+            d.line((x0, y0, x1, y1), fill=col, width=lw)
+
+    def moon(cx, cy, r):
+        d.ellipse((cx - r, cy - r, cx + r, cy + r), fill=moon_col)
+        off = r * 0.7
+        d.ellipse((cx - r + off, cy - r - r * 0.15, cx + r + off, cy + r - r * 0.15),
+                  fill=(0, 0, 0, 0))
+
+    def cloud(cx, cy, w, col=cloud_col):
+        h = w * 0.34
+        d.rounded_rectangle((cx - w / 2, cy, cx + w / 2, cy + h),
+                            radius=h / 2, fill=col)
+        d.ellipse((cx - w * 0.5, cy - w * 0.12, cx - w * 0.06, cy + h * 0.9), fill=col)
+        d.ellipse((cx - w * 0.28, cy - w * 0.34, cx + w * 0.18, cy + h * 0.6), fill=col)
+        d.ellipse((cx + w * 0.04, cy - w * 0.16, cx + w * 0.5, cy + h * 0.9), fill=col)
+
+    cx = W / 2
+    if group in ("01",):
+        (moon if night else sun)(cx, W * 0.5, W * 0.24)
+    elif group in ("02", "03"):
+        if night:
+            moon(W * 0.36, W * 0.36, W * 0.16)
+        else:
+            sun(W * 0.36, W * 0.36, W * 0.16)
+        cloud(W * 0.52, W * 0.5, W * 0.62)
+    elif group == "04":
+        cloud(W * 0.42, W * 0.36, W * 0.5)
+        cloud(W * 0.56, W * 0.54, W * 0.62)
+    elif group in ("09", "10"):
+        cloud(cx, W * 0.38, W * 0.66)
+        for i in range(3):
+            x = W * (0.32 + i * 0.18)
+            d.line((x, W * 0.66, x - W * 0.06, W * 0.84), fill=rain_col, width=lw)
+    elif group == "11":
+        cloud(cx, W * 0.36, W * 0.66)
+        bolt = [(W * 0.5, W * 0.6), (W * 0.4, W * 0.78), (W * 0.5, W * 0.78),
+                (W * 0.42, W * 0.94), (W * 0.62, W * 0.7), (W * 0.52, W * 0.7)]
+        d.polygon(bolt, fill=bolt_col)
+    elif group == "13":
+        cloud(cx, W * 0.38, W * 0.66)
+        r = W * 0.045
+        for i in range(3):
+            x = W * (0.33 + i * 0.17)
+            d.ellipse((x - r, W * 0.74 - r, x + r, W * 0.74 + r), fill=snow_col)
+    elif group == "50":
+        for i in range(4):
+            y = W * (0.32 + i * 0.14)
+            inset = W * (0.16 if i % 2 else 0.22)
+            d.line((inset, y, W - inset, y), fill=mist_col, width=lw)
+    else:
+        cloud(cx, W * 0.5, W * 0.66)
+
+    return img.resize((size, size), Image.LANCZOS)

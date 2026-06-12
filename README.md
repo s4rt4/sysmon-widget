@@ -10,7 +10,7 @@ the clock card) for Settings, Autostart, Restart and Exit.
 Grab the `.rpm` from the [latest release](https://github.com/s4rt4/sysmon-widget/releases):
 
 ```bash
-sudo dnf install ./sysmon-widget-1.0.0-1.fc43.noarch.rpm
+sudo dnf install ./sysmon-widget-1.0.1-1.fc43.noarch.rpm
 ```
 
 Core Python dependencies are pulled automatically; `playerctl` and
@@ -31,14 +31,14 @@ python main.py
 On Debian/Ubuntu systems that block global `pip` installs with `externally-managed-environment`, either use the virtual environment above or install packaged dependencies:
 
 ```bash
-sudo apt install python3-tk python3-psutil python3-requests python3-dbus python3-pil python3-xlib playerctl
+sudo apt install python3-tk python3-psutil python3-requests python3-dbus python3-pil python3-pil.imagetk python3-xlib playerctl
 python3 main.py
 ```
 
 On Fedora:
 
 ```bash
-sudo dnf install python3-tkinter python3-psutil python3-requests python3-dbus python3-pillow python3-xlib playerctl python3-pystray
+sudo dnf install python3-tkinter python3-psutil python3-requests python3-dbus python3-pillow python3-pillow-tk python3-xlib playerctl python3-pystray
 python3 main.py
 ```
 
@@ -108,8 +108,8 @@ sudo apt install ./dist/sysmon-widget_0.2.2_all.deb
 Fedora (RPM):
 
 ```bash
-packaging/build-rpm.sh 1.0.0
-sudo dnf install ./dist/sysmon-widget-1.0.0-1.fc43.noarch.rpm
+packaging/build-rpm.sh 1.0.1
+sudo dnf install ./dist/sysmon-widget-1.0.1-1.fc43.noarch.rpm
 ```
 
 Both install to `/opt/sysmon-widget` with a `sysmon-widget` launcher, an

@@ -7,7 +7,7 @@ except ImportError:
     _PIL_AVAILABLE = False
 
 
-_SCALE = 2
+_SCALE = 4
 
 
 class RingGauge:
@@ -90,7 +90,7 @@ class RingGauge:
             draw = ImageDraw.Draw(img)
             extent = self.value / 100 * 360
             draw.arc(self._bbox, start=-90, end=-90 + extent, fill=self.color, width=self._scaled_width)
-        img = img.resize((self.size, self.size), Image.BILINEAR)
+        img = img.resize((self.size, self.size), Image.LANCZOS)
         self._photo = ImageTk.PhotoImage(img)
         self.canvas.create_image(0, 0, image=self._photo, anchor="nw")
 
@@ -106,10 +106,13 @@ class RingGauge:
             width=self.ring_width,
         )
         if self.value > 0:
+            # Tk reduces an arc extent modulo 360, so a full 360 draws nothing
+            # (leaving only the white track). Cap at 359.9 like the track above.
+            extent = min(359.9, self.value / 100 * 360)
             self.canvas.create_arc(
                 bounds,
                 start=90,
-                extent=-(self.value / 100 * 360),
+                extent=-extent,
                 style=tk.ARC,
                 outline=self.color,
                 width=self.ring_width,

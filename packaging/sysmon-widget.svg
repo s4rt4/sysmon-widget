@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <rect x="6" y="6" width="116" height="116" rx="28" fill="#161a20"/>
+  <rect x="6.75" y="6.75" width="114.5" height="114.5" rx="27.25" fill="none" stroke="#2E3540" stroke-width="1.5"/>
+  <!-- ring track -->
+  <circle cx="64" cy="64" r="38" fill="none" stroke="#2E3540" stroke-width="12"/>
+  <!-- ring value (~72%) -->
+  <circle cx="64" cy="64" r="38" fill="none" stroke="#4DD0E1" stroke-width="12"
+          stroke-linecap="round" stroke-dasharray="171.9 238.76"
+          transform="rotate(-90 64 64)"/>
+  <!-- inner monitor bars -->
+  <g fill="#80CBC4">
+    <rect x="48" y="62" width="7" height="16" rx="3"/>
+    <rect x="60.5" y="52" width="7" height="26" rx="3"/>
+    <rect x="73" y="58" width="7" height="20" rx="3"/>
+  </g>
+</svg>

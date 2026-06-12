@@ -46,7 +46,9 @@ def main():
     if psutil is not None:
         psutil.cpu_percent(interval=None)
 
-    root = tk.Tk()
+    # className sets WM_CLASS so it matches StartupWMClass in the .desktop file;
+    # GNOME then maps the running window to the launcher entry and its icon.
+    root = tk.Tk(className="sysmon-widget")
     root.title(WINDOW_TITLE)
     root.overrideredirect(False)
     root.configure(bg=CONFIG["bg_color"])
