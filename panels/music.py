@@ -26,11 +26,11 @@ class MusicPanel:
         accent = config["accent"]
         bg = self.widget.cget("bg")
 
-        row = tk.Frame(self.widget, bg=bg)
-        row.pack(fill="both", expand=True)
+        header = self._header = tk.Frame(self.widget, bg=bg)
+        header.pack(fill="x")
 
         self.vis_canvas = tk.Canvas(
-            row,
+            header,
             width=110,
             height=self.music_config["vis_height"] + 8,
             bg=bg,
@@ -39,16 +39,17 @@ class MusicPanel:
         if self.music_config["show_visualizer"]:
             self.vis_canvas.pack(side="right", padx=(8, 0))
 
-        left = tk.Frame(row, bg=bg)
-        left.pack(side="left", fill="both", expand=True)
+        left = tk.Frame(header, bg=bg)
+        left.pack(side="left", fill="x", expand=True)
 
         self.status_label = make_label(left, config, text="♪ No media", size=10, color=accent["text_muted"], weight="bold")
         self.status_label.pack(fill="x")
         self.title_canvas = tk.Canvas(left, height=18, bg=bg, highlightthickness=0)
         self.title_offset = 0
         self.meta_label = make_label(left, config, text="", size=9, color=accent["text_muted"])
-        self.time_label = make_label(left, config, text="0:00 / 0:00", size=9, color=accent["text_muted"])
-        self.progress = BarMeter(left, 10, 3, accent["primary"], accent["track_bg"], bg)
+        # time + progress span the full panel width, below the header row
+        self.time_label = make_label(self.widget, config, text="0:00 / 0:00", size=9, color=accent["text_muted"])
+        self.progress = BarMeter(self.widget, 10, 3, accent["primary"], accent["track_bg"], bg)
         self._collapsed = True
         self._has_track = False
 
@@ -61,7 +62,7 @@ class MusicPanel:
             return
         self.title_canvas.pack(fill="x", pady=(2, 0), after=self.status_label)
         self.meta_label.pack(fill="x", after=self.title_canvas)
-        self.time_label.pack(fill="x", pady=(4, 0), after=self.meta_label)
+        self.time_label.pack(fill="x", pady=(4, 0), after=self._header)
         self.progress.canvas.pack(fill="x", pady=(2, 0), after=self.time_label)
         self._collapsed = False
 
